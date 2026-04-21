@@ -2,61 +2,150 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.24.
 
-## Development server
+## Project Structure
 
-To start a local development server, run:
+```
+angular-learning/
+├── src/              # Angular frontend
+├── backend/          # NestJS backend
+│   ├── src/
+│   │   ├── users/    # User-related modules
+│   │   └── gateway/  # WebSocket gateway
+├── database.sqlite   # SQLite database
+└── README.md
+```
+
+## Technology Stack
+
+- **Frontend**: Angular 19, TypeScript, RxJS
+- **Backend**: NestJS, TypeORM, SQLite
+- **API**: RESTful API + WebSocket
+
+## Development Server
+
+### Frontend
+
+To start the Angular development server, run:
 
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Open your browser and navigate to `http://localhost:4200/` (or the port shown in the terminal). The application will automatically reload when you modify any source files.
 
-## Code scaffolding
+### Backend
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+To start the NestJS development server, run:
+
+```bash
+cd backend
+npm run start:dev
+```
+
+The backend server will run on `http://localhost:3000/`.
+
+## API Switching Mechanism
+
+The frontend automatically switches between two API sources:
+
+1. **Local API**: `http://localhost:3000/users` (NestJS backend with SQLite)
+2. **Fallback API**: `https://jsonplaceholder.typicode.com/users` (public API)
+
+### How It Works
+
+- **WebSocket Notification**: When the backend starts, it sends a WebSocket notification to the frontend
+- **Automatic Switching**: The frontend switches to the local API when it receives the notification
+- **Fallback Mechanism**: If the backend is not available, the frontend uses the fallback API
+- **Periodic Check**: If WebSocket fails, the frontend checks the backend status every 30 seconds
+
+## Database
+
+The backend uses SQLite for data persistence:
+
+- Database file: `backend/database.sqlite`
+- TypeORM for database operations
+- Automatic schema synchronization
+
+## Code Scaffolding
+
+### Frontend (Angular)
+
+To generate a new component, run:
 
 ```bash
 ng generate component component-name
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+For a complete list of available schematics, run:
 
 ```bash
 ng generate --help
 ```
 
+### Backend (NestJS)
+
+To generate a new module, run:
+
+```bash
+cd backend
+nest generate module module-name
+```
+
 ## Building
 
-To build the project run:
+### Frontend
+
+To build the Angular project, run:
 
 ```bash
 ng build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Build artifacts will be stored in the `dist/` directory.
 
-## Running unit tests
+### Backend
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+To build the NestJS project, run:
+
+```bash
+cd backend
+npm run build
+```
+
+## Testing
+
+### Frontend
+
+To run unit tests:
 
 ```bash
 ng test
 ```
 
-## Running end-to-end tests
+### Backend
 
-For end-to-end (e2e) testing, run:
+To run backend tests:
 
 ```bash
-ng e2e
+cd backend
+npm run test
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+## API Endpoints
+
+### User API
+
+- `GET /users` - Get all users
+- `GET /users/:id` - Get user by ID
+- `POST /users` - Create new user
+- `PATCH /users/:id` - Update user
+- `DELETE /users/:id` - Delete user
 
 ## Additional Resources
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli)
+- [NestJS Documentation](https://docs.nestjs.com/)
+- [TypeORM Documentation](https://typeorm.io/)
 
 ---
 
@@ -64,58 +153,147 @@ For more information on using the Angular CLI, including detailed command refere
 
 本项目基于 [Angular CLI](https://github.com/angular/angular-cli) 19.2.24 版本生成。
 
+## 项目结构
+
+```
+angular-learning/
+├── src/              # Angular 前端
+├── backend/          # NestJS 后端
+│   ├── src/
+│   │   ├── users/    # 用户相关模块
+│   │   └── gateway/  # WebSocket 网关
+├── database.sqlite   # SQLite 数据库
+└── README.md
+```
+
+## 技术栈
+
+- **前端**: Angular 19, TypeScript, RxJS
+- **后端**: NestJS, TypeORM, SQLite
+- **API**: RESTful API + WebSocket
+
 ## 开发服务器
 
-启动本地开发服务器，请运行：
+### 前端
+
+启动 Angular 开发服务器，请运行：
 
 ```bash
 ng serve
 ```
 
-服务器启动后，打开浏览器并访问 `http://localhost:4200/`。当你修改源代码时，应用会自动重新加载。
+打开浏览器并访问 `http://localhost:4200/`（或终端中显示的端口）。当你修改源代码时，应用会自动重新加载。
+
+### 后端
+
+启动 NestJS 开发服务器，请运行：
+
+```bash
+cd backend
+npm run start:dev
+```
+
+后端服务器将在 `http://localhost:3000/` 上运行。
+
+## API 切换机制
+
+前端会自动在两个 API 源之间切换：
+
+1. **本地 API**: `http://localhost:3000/users`（带 SQLite 的 NestJS 后端）
+2. **备用 API**: `https://jsonplaceholder.typicode.com/users`（公共 API）
+
+### 工作原理
+
+- **WebSocket 通知**: 后端启动时，通过 WebSocket 向前端发送通知
+- **自动切换**: 前端收到通知后切换到本地 API
+- **备用机制**: 如果后端不可用，前端使用备用 API
+- **定期检查**: 如果 WebSocket 失败，前端每 30 秒检查一次后端状态
+
+## 数据库
+
+后端使用 SQLite 进行数据持久化：
+
+- 数据库文件: `backend/database.sqlite`
+- TypeORM 用于数据库操作
+- 自动同步表结构
 
 ## 代码脚手架
 
-Angular CLI 提供了强大的代码生成工具。生成新组件请运行：
+### 前端（Angular）
+
+生成新组件，请运行：
 
 ```bash
 ng generate component component-name
 ```
 
-获取所有可用生成器（如 `components`、`directives`、`pipes`）的完整列表，请运行：
+获取所有可用生成器的完整列表，请运行：
 
 ```bash
 ng generate --help
 ```
 
+### 后端（NestJS）
+
+生成新模块，请运行：
+
+```bash
+cd backend
+nest generate module module-name
+```
+
 ## 构建
 
-构建项目请运行：
+### 前端
+
+构建 Angular 项目，请运行：
 
 ```bash
 ng build
 ```
 
-项目将进行编译并将构建产物存储在 `dist/` 目录中。默认情况下，生产环境构建会对应用进行性能优化。
+构建产物将存储在 `dist/` 目录中。
 
-## 运行单元测试
+### 后端
 
-使用 [Karma](https://karma-runner.github.io) 测试运行器执行单元测试，请运行：
+构建 NestJS 项目，请运行：
+
+```bash
+cd backend
+npm run build
+```
+
+## 测试
+
+### 前端
+
+运行单元测试：
 
 ```bash
 ng test
 ```
 
-## 运行端到端测试
+### 后端
 
-执行端到端（e2e）测试，请运行：
+运行后端测试：
 
 ```bash
-ng e2e
+cd backend
+npm run test
 ```
 
-Angular CLI 默认不包含端到端测试框架，你可以选择适合自己需求的测试框架。
+## API 端点
+
+### 用户 API
+
+- `GET /users` - 获取所有用户
+- `GET /users/:id` - 根据 ID 获取用户
+- `POST /users` - 创建新用户
+- `PATCH /users/:id` - 更新用户
+- `DELETE /users/:id` - 删除用户
 
 ## 更多资源
 
-了解更多关于 Angular CLI 的使用方法，包括详细的命令参考，请访问 [Angular CLI 概述与命令参考](https://angular.dev/tools/cli) 页面。
+- [Angular CLI 概述与命令参考](https://angular.dev/tools/cli)
+- [NestJS 文档](https://docs.nestjs.com/)
+- [TypeORM 文档](https://typeorm.io/)
