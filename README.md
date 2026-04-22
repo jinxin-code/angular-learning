@@ -10,7 +10,7 @@ angular-learning/
 ├── backend/          # NestJS backend
 │   ├── src/
 │   │   ├── users/    # User-related modules
-│   │   └── gateway/  # WebSocket gateway
+│   │   └── events/   # SSE event controller
 ├── database.sqlite   # SQLite database
 └── README.md
 ```
@@ -19,7 +19,7 @@ angular-learning/
 
 - **Frontend**: Angular 19, TypeScript, RxJS
 - **Backend**: NestJS, TypeORM, SQLite
-- **API**: RESTful API + WebSocket
+- **API**: RESTful API + Server-Sent Events (SSE)
 
 ## Development Server
 
@@ -53,10 +53,10 @@ The frontend automatically switches between two API sources:
 
 ### How It Works
 
-- **WebSocket Notification**: When the backend starts, it sends a WebSocket notification to the frontend
+- **SSE Notification**: When the backend starts, it sends an SSE notification to the frontend
 - **Automatic Switching**: The frontend switches to the local API when it receives the notification
 - **Fallback Mechanism**: If the backend is not available, the frontend uses the fallback API
-- **Periodic Check**: If WebSocket fails, the frontend checks the backend status every 30 seconds
+- **Periodic Check**: If SSE fails, the frontend checks the backend status every 30 seconds
 
 ## Database
 
@@ -141,11 +141,16 @@ npm run test
 - `PATCH /users/:id` - Update user
 - `DELETE /users/:id` - Delete user
 
+### Events API
+
+- `GET /events/stream` - SSE event stream for backend status notification
+
 ## Additional Resources
 
 - [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli)
 - [NestJS Documentation](https://docs.nestjs.com/)
 - [TypeORM Documentation](https://typeorm.io/)
+- [Server-Sent Events (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
 
 ---
 
@@ -161,7 +166,7 @@ angular-learning/
 ├── backend/          # NestJS 后端
 │   ├── src/
 │   │   ├── users/    # 用户相关模块
-│   │   └── gateway/  # WebSocket 网关
+│   │   └── events/   # SSE 事件控制器
 ├── database.sqlite   # SQLite 数据库
 └── README.md
 ```
@@ -170,7 +175,7 @@ angular-learning/
 
 - **前端**: Angular 19, TypeScript, RxJS
 - **后端**: NestJS, TypeORM, SQLite
-- **API**: RESTful API + WebSocket
+- **API**: RESTful API + Server-Sent Events (SSE)
 
 ## 开发服务器
 
@@ -204,10 +209,10 @@ npm run start:dev
 
 ### 工作原理
 
-- **WebSocket 通知**: 后端启动时，通过 WebSocket 向前端发送通知
+- **SSE 通知**: 后端启动时，通过 Server-Sent Events 向前端发送通知
 - **自动切换**: 前端收到通知后切换到本地 API
 - **备用机制**: 如果后端不可用，前端使用备用 API
-- **定期检查**: 如果 WebSocket 失败，前端每 30 秒检查一次后端状态
+- **定期检查**: 如果 SSE 失败，前端每 30 秒检查一次后端状态
 
 ## 数据库
 
@@ -292,8 +297,13 @@ npm run test
 - `PATCH /users/:id` - 更新用户
 - `DELETE /users/:id` - 删除用户
 
+### 事件 API
+
+- `GET /events/stream` - SSE 事件流，用于后端状态通知
+
 ## 更多资源
 
 - [Angular CLI 概述与命令参考](https://angular.dev/tools/cli)
 - [NestJS 文档](https://docs.nestjs.com/)
 - [TypeORM 文档](https://typeorm.io/)
+- [Server-Sent Events (MDN)](https://developer.mozilla.org/zh-CN/docs/Web/API/Server-sent_events)
