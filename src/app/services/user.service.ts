@@ -1,18 +1,60 @@
 /**
  * UserService - 用户服务
  *
- * 服务是Angular中用于组织共享代码的核心概念
- * 使用@Injectable装饰器标记为可注入的服务
- * providedIn: 'root' 表示这是一个单例服务，整个应用共享一个实例
+ * ===== Angular 14+ 新特性 - 服务相关 =====
+ *
+ * 1. @Injectable({ providedIn: 'root' })
+ *    根级别注入，整个应用共享单例
+ *
+ * 2. 构造函数注入
+ *    TypeScript 访问修饰符自动创建类属性
+ *
+ * ===== Angular 依赖注入 (DI) =====
+ *
+ * Angular 的依赖注入系统：
+ * 1. 提供商 (Provider) - 声明可注入的服务
+ * 2. 注入器 (Injector) - 管理依赖解析
+ * 3. 令牌 (Token) - 标识依赖
+ *
+ * providedIn: 'root' 使服务成为应用级单例
  */
 import { Injectable, OnDestroy } from '@angular/core';
-/** HttpClient - Angular的HTTP客户端，用于发送HTTP请求 */
+/**
+ * HttpClient - Angular HTTP 客户端
+ *
+ * 【特点】
+ * - 基于 RxJS Observable
+ * - 支持泛型类型推断
+ * - 自动 JSON 转换
+ * - 支持拦截器
+ */
 import { HttpClient } from '@angular/common/http';
-/** Observable - RxJS observables，用于处理异步数据流 */
+/**
+ * Observable, Subject, interval, takeUntil - RxJS
+ *
+ * 【RxJS 核心概念】
+ * - Observable: 可观察对象，生产值流
+ * - Subject: 特殊 Observable，可手动发射值
+ * - interval: 定时器，创建定时发射的 Observable
+ * - takeUntil: 操作符，在某个条件满足时完成 Observable
+ */
 import { Observable, Subject, interval, takeUntil } from 'rxjs';
-/** 引入User模型，获得类型检查支持 */
+
 import { User } from '../models/user';
 
+/**
+ * @Injectable 装饰器
+ *
+ * 【providedIn 选项】
+ * - 'root': 应用级单例（整个应用只有一个实例）
+ * - 'platform': 平台级单例
+ * - 'any': 每个模块一个实例
+ * - undefined: 需要在 NgModule 或 component providers 中声明
+ *
+ * 【Angular 17+ 变化】
+ * 推荐使用函数式 providedIn: 'root'
+ * 替代旧的在 NgModule providers 数组中声明
+ */
 @Injectable({
   providedIn: 'root'
 })
@@ -27,9 +69,16 @@ export class UserService implements OnDestroy {
   private currentApiUrl: string = this.fallbackApiUrl;
   /** 后端服务是否可用 */
   private isLocalBackendAvailable = false;
-  /** EventSource 实例 */
+  /** EventSource 实例（原生浏览器 API） */
   private eventSource: EventSource | null = null;
-  /** 用于取消订阅的 Subject */
+  /**
+   * Subject 用于取消订阅
+   *
+   * 【RxJS 内存管理】
+   * Subject 是一个可以手动发射值的 Observable
+   * 当调用 next() 时，所有订阅者都会收到值
+   * 当调用 complete() 时，Observable 完成
+   */
   private destroy$ = new Subject<void>();
   /** SSE 连接是否正在监听 */
   private isSSEConnecting = false;
@@ -37,83 +86,94 @@ export class UserService implements OnDestroy {
   private isSSESupported: boolean;
 
   /**
-   * 依赖注入 HttpClient
-   * Angular会自动注入HttpClient实例
-   * 这是依赖注入(DI)设计模式的典型应用
+   * 构造函数注入
+   *
+   * 【方式】
+   * constructor(private http: HttpClient) {}
+   *
+   * TypeScript 的 private 修饰符会自动：
+   * 1. 声明类属性 http
+   * 2. 注入 HttpClient 实例
+   *
+   * 【替代方式 - inject 函数】
+   * http = inject(HttpClient);
+   * Angular 16+ 支持，更灵活
    */
   constructor(private http: HttpClient) {
-    // 检测浏览器是否支持 SSE
     this.isSSESupported = this.checkSSESupport();
 
     if (this.isSSESupported) {
-      // 支持 SSE，尝试建立连接
       this.setupSSE();
     } else {
       console.log('当前浏览器不支持 SSE，使用定期检测方案');
-      // 不支持 SSE，直接启动定期检测
       this.startPeriodicCheck();
     }
   }
 
   /**
    * 检测浏览器是否支持 SSE
-   * EventSource 是浏览器原生 API，IE 全系列不支持
+   * EventSource 是浏览器原生 API
    */
   private checkSSESupport(): boolean {
     return typeof window !== 'undefined' && typeof window.EventSource !== 'undefined';
   }
 
   /**
-   * 组件销毁时清理资源
-   * 实现 OnDestroy 生命周期钩子
+   * ngOnDestroy - 组件销毁生命周期钩子
+   *
+   * 【作用】
+   * 当组件被销毁时自动调用
+   * 用于清理资源、取消订阅、关闭连接等
+   *
+   * 【为什么要清理？】
+   * - 防止内存泄漏
+   * - 取消未完成的网络请求
+   * - 关闭 EventSource 等原生连接
    */
   ngOnDestroy(): void {
-    // 发出完成信号，停止所有订阅
+    /** 发出完成信号，停止所有使用 destroy$ 的订阅 */
     this.destroy$.next();
     this.destroy$.complete();
-    // 关闭 SSE 连接
+    /** 关闭 SSE 连接 */
     this.closeSSE();
   }
 
   /**
    * 建立 SSE 连接
-   * 使用 Server-Sent Events 监听后端启动通知
    *
-   * SSE 优势：
-   * 1. 简单基于 HTTP，无需握手协议
+   * ===== Server-Sent Events (SSE) =====
+   *
+   * 【概念】
+   * SSE 是一种服务器向浏览器推送数据的技术
+   * 基于 HTTP 协议，单向通信（服务器 → 浏览器）
+   *
+   * 【优势】
+   * 1. 简单基于 HTTP，无需 WebSocket 握手
    * 2. 浏览器自动处理重连
-   * 3. 单向通信，适合服务端推送场景
+   * 3. 自动断开连接时自动重连
+   * 4. 适合实时性要求不高的场景
    *
-   * 浏览器兼容性：
-   * - Chrome 6+, Firefox 6+, Safari 5.1+, Edge 79+ 支持
-   * - Internet Explorer 全系列不支持
+   * 【限制】
+   * 单向通信（服务器推送到浏览器）
+   * 如需双向通信，使用 WebSocket
    */
   private setupSSE(): void {
-    // 防止重复创建连接
     if (this.eventSource || this.isSSEConnecting) {
       return;
     }
 
     try {
       this.isSSEConnecting = true;
-      // 连接到后端 SSE 端点
-      // EventSource 是浏览器原生 API，自动处理重连
+      /** 创建 EventSource，连接到 SSE 端点 */
       this.eventSource = new EventSource(this.sseUrl);
 
-      /**
-       * SSE 连接打开时触发
-       * 这意味着与后端的连接已建立
-       */
+      /** 连接打开时触发 */
       this.eventSource.onopen = () => {
         console.log('SSE 连接已建立');
         this.isSSEConnecting = false;
       };
 
-      /**
-       * 收到消息时触发
-       * 当后端发送消息时，前端会收到通知
-       * 例如：后端启动时发送 "Backend service started"
-       */
+      /** 收到消息时触发 */
       this.eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -125,84 +185,72 @@ export class UserService implements OnDestroy {
         }
       };
 
-      /**
-       * SSE 错误时触发
-       * 重要：EventSource 会自动尝试重连，我们不需要手动处理
-       * 只有当连接确实无法建立时，才启动定期检测
-       */
+      /** 连接错误时触发 */
       this.eventSource.onerror = () => {
         console.log('SSE 连接断开，将自动重连...');
         this.isSSEConnecting = false;
-        // 注意：这里没有关闭 EventSource，让浏览器自动重连
-        // 如果需要强制停止，可以调用 this.closeSSE()
       };
     } catch (error) {
       console.error('SSE 初始化失败:', error);
       this.isSSEConnecting = false;
-      // SSE 初始化失败时，启动定期检测
       this.startPeriodicCheck();
     }
   }
 
-  /**
-   * 处理后端启动事件
-   * 切换到本地 API
-   */
+  /** 处理后端启动事件 */
   private handleBackendStarted(): void {
     if (!this.isLocalBackendAvailable) {
       this.isLocalBackendAvailable = true;
       this.currentApiUrl = this.localApiUrl;
       console.log('接收到后端启动通知，切换到本地 API');
-      // 后端已启动，不需要 SSE 了，关闭连接节省资源
       this.closeSSE();
     }
   }
 
   /**
    * 启动定期检测
-   * 当 SSE 不可用时作为备用方案
    *
-   * 检测逻辑：
-   * 1. 每 60 秒检测一次后端状态
-   * 2. 如果发现后端可用，切换到本地 API 并重建 SSE 连接
-   * 3. 使用 takeUntil 确保可以取消订阅
+   * ===== RxJS 操作符 =====
+   *
+   * interval(60000) - 创建一个每 60 秒发射一次的 Observable
+   *
+   * pipe() - 连接多个操作符
+   *
+   * takeUntil(destroy$) - 在 destroy$ 发射值时完成 Observable
+   * 这是 Angular 中处理订阅清理的常用模式
    */
   private startPeriodicCheck(): void {
-    // 如果已经在使用本地 API，不需要检测
     if (this.isLocalBackendAvailable) {
       return;
     }
 
     console.log('启动定期检测后端状态（每60秒）');
 
-    // 每60秒检测一次后端
     interval(60000)
-      .pipe(takeUntil(this.destroy$)) // 组件销毁时自动取消订阅
+      .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        // 如果已经切换到本地 API，停止检测
         if (this.isLocalBackendAvailable) {
           console.log('后端已可用，停止定期检测');
           return;
         }
-
-        // 检测后端状态
         this.checkBackendStatus();
       });
   }
 
-  /**
-   * 检测后端服务状态
-   */
+  /** 检测后端服务状态 */
   private checkBackendStatus(): void {
+    /**
+     * HttpClient.get() 返回 Observable
+     * { observe: 'response' } 选项使返回完整的 HTTP 响应对象
+     * 默认只返回 body
+     */
     this.http.get(this.localApiUrl, { observe: 'response' }).subscribe({
       next: () => {
-        // 后端可用，切换到本地 API
         if (!this.isLocalBackendAvailable) {
           this.handleBackendStarted();
         }
       },
       error: () => {
-        // 后端不可用，保持使用备用 API
         if (this.isLocalBackendAvailable) {
           this.isLocalBackendAvailable = false;
           this.currentApiUrl = this.fallbackApiUrl;
@@ -212,9 +260,7 @@ export class UserService implements OnDestroy {
     });
   }
 
-  /**
-   * 关闭 SSE 连接
-   */
+  /** 关闭 SSE 连接 */
   private closeSSE(): void {
     if (this.eventSource) {
       this.eventSource.close();
@@ -222,10 +268,7 @@ export class UserService implements OnDestroy {
     }
   }
 
-  /**
-   * 获取当前 API 状态
-   * @returns API状态对象，包含是否使用本地API和当前API地址
-   */
+  /** 获取当前 API 状态 */
   getApiStatus(): { isLocal: boolean; apiUrl: string } {
     return {
       isLocal: this.isLocalBackendAvailable,
@@ -235,44 +278,37 @@ export class UserService implements OnDestroy {
 
   /**
    * 获取所有用户列表
-   * @returns Observable<User[]> - 返回用户数组的可观察对象
+   *
+   * 【泛型类型】
+   * HttpClient.get<User[]>() 返回 Observable<User[]>
+   * TypeScript 会推断类型，提供类型检查支持
    */
   getUsers(): Observable<User[]> {
     return this.http.get<User[]>(this.currentApiUrl);
   }
 
-  /**
-   * 获取单个用户详情
-   * @param id - 用户ID
-   * @returns Observable<User> - 返回单个用户的可观察对象
-   */
+  /** 获取单个用户详情 */
   getUser(id: number): Observable<User> {
     return this.http.get<User>(`${this.currentApiUrl}/${id}`);
   }
 
   /**
    * 创建新用户
-   * @param user - 用户对象
-   * @returns Observable<User> - 返回创建的用户对象
+   *
+   * 【Omit 工具类型】
+   * Omit<User, 'id'> 表示 User 类型但排除 id 属性
+   * 用于创建用户时不需要提供 id（后端自动生成）
    */
-  createUser(user: User): Observable<User> {
+  createUser(user: Omit<User, 'id'>): Observable<User> {
     return this.http.post<User>(this.currentApiUrl, user);
   }
 
-  /**
-   * 更新现有用户（部分更新）
-   * @param user - 用户对象（必须包含id）
-   * @returns Observable<User> - 返回更新后的用户对象
-   */
+  /** 更新现有用户（部分更新） */
   updateUser(user: User): Observable<User> {
     return this.http.patch<User>(`${this.currentApiUrl}/${user.id}`, user);
   }
 
-  /**
-   * 删除用户
-   * @param id - 要删除的用户ID
-   * @returns Observable<any> - 返回删除的用户对象
-   */
+  /** 删除用户 */
   deleteUser(id: number): Observable<any> {
     return this.http.delete<any>(`${this.currentApiUrl}/${id}`);
   }

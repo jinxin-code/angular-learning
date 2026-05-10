@@ -1,30 +1,45 @@
 /**
  * UserListComponent - 用户列表组件
  *
- * 组件是Angular应用的核心构建块
- * 每个组件包含：HTML模板、TypeScript逻辑、CSS样式
+ * ===== Angular 17+ 新特性 - 控制流指令 =====
  *
- * standalone: true - 表示这是一个独立组件（Angular 14+新特性）
- * 不需要像传统方式那样在Module中声明
+ * 本组件展示了 Angular 17 引入的新控制流语法：
+ *
+ * 1. @if / @else - 条件渲染
+ *    替代旧的 *ngIf 指令，语法更简洁
+ *
+ * 2. @for - 循环渲染
+ *    替代旧的 *ngFor 指令
+ *
+ * 3. @switch - 条件切换
+ *    替代旧的 *ngSwitch 指令
+ *
+ * ===== Standalone Component =====
+ * standalone: true 表示这是独立组件，无需 NgModule
  */
 import { Component, OnInit } from '@angular/core';
 /** FormsModule 提供双向数据绑定 [(ngModel)] */
 import { FormsModule } from '@angular/forms';
-/** RouterLink 用于在模板中实现声明式路由导航 */
+/** CommonModule 提供 ngModel 等指令 */
+import { CommonModule } from '@angular/common';
+/** RouterLink 用于声明式路由导航，替代旧的 routerLink 属性绑定 */
 import { Router, RouterLink } from '@angular/router';
+
 import { User } from '../models/user';
 import { UserService } from '../services/user.service';
+import { ToastService } from '../toast/toast.service';
 
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  /** 新控制流语法不需要CommonModule */
-  imports: [FormsModule, RouterLink],
+
+  imports: [FormsModule, CommonModule, RouterLink],
+
   template: `
-    <!-- 新增用户表单 -->
+    <!-- 新增用户表单卡片 -->
     <div class="card add-user-form">
       <h3>新增用户</h3>
-      <!-- [(ngModel)] 实现双向数据绑定 -->
+
       <div class="form-group">
         <label>姓名</label>
         <input [(ngModel)]="newUser.name" placeholder="请输入姓名">
@@ -44,11 +59,12 @@ import { UserService } from '../services/user.service';
     <div class="card">
       <div class="filters">
         <div class="search-box">
-          <!-- (input) 事件监听用户输入，实现实时搜索 -->
-          <input type="text" [(ngModel)]="searchTerm" (input)="searchUsers()" placeholder="搜索姓名或用户名...">
+          <input type="text"
+                 [(ngModel)]="searchTerm"
+                 (input)="searchUsers()"
+                 placeholder="搜索姓名或用户名...">
         </div>
         <div class="filter-buttons">
-          <!-- 条件渲染使用三元表达式 -->
           <button class="btn btn-secondary" (click)="toggleSortByUsername()">
             {{ sortByUsername ? '取消排序' : '按用户名排序' }}
           </button>
@@ -60,62 +76,51 @@ import { UserService } from '../services/user.service';
       </div>
     </div>
 
-    <!--
-      @for 控制流指令（Angular 17+新语法）
-      语法：@for (item of items; track item.id) { ... }
-      track 关键字用于性能优化，必须指定
-    -->
-    <div class="user-grid">
-      @for (user of filteredUsers; track user.id) {
-        <div class="user-card">
-          <!--
-            @if 控制流指令（Angular 17+新语法）
-            语法：@if (condition) { ... } @else if (...) { ... } @else { ... }
-            更简洁，不需要 *ngIf 指令
-          -->
-          @if (!editingUser || editingUser.id !== user.id) {
-            <h3>{{ user.name }}</h3>
-            <p><strong>用户名:</strong> {{ user.username }}</p>
-            <p><strong>邮箱:</strong> {{ user.email }}</p>
-            <div class="actions">
-              <!-- [routerLink] 声明式路由跳转 -->
-              <button class="btn btn-primary" [routerLink]="['/user', user.id]">查看详情</button>
-              <button class="btn btn-secondary" (click)="startEdit(user)">编辑</button>
-              <button class="btn btn-danger" (click)="confirmDelete(user)">删除</button>
-            </div>
-          } @else {
-            <!-- 编辑模式 -->
-            <div class="form-group">
-              <label>姓名</label>
-              <input [(ngModel)]="editingUser.name" placeholder="姓名">
-            </div>
-            <div class="form-group">
-              <label>用户名</label>
-              <input [(ngModel)]="editingUser.username" placeholder="用户名">
-            </div>
-            <div class="form-group">
-              <label>邮箱</label>
-              <input [(ngModel)]="editingUser.email" placeholder="邮箱">
-            </div>
-            <div class="actions">
-              <button class="btn btn-success" (click)="saveEdit()">保存</button>
-              <button class="btn btn-secondary" (click)="cancelEdit()">取消</button>
-            </div>
-          }
-        </div>
-      }
-    </div>
+    @if (isLoading) {
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+      </div>
+    } @else {
+      <div class="user-grid">
+        @for (user of filteredUsers; track user.id) {
+          <div class="user-card">
+            @if (!editingUser || editingUser.id !== user.id) {
+              <h3>{{ user.name }}</h3>
+              <p><strong>用户名:</strong> {{ user.username }}</p>
+              <p><strong>邮箱:</strong> {{ user.email }}</p>
+              <div class="actions">
+                <button class="btn btn-primary" [routerLink]="['/user', user.id]">查看详情</button>
+                <button class="btn btn-secondary" (click)="startEdit(user)">编辑</button>
+                <button class="btn btn-danger" (click)="confirmDelete(user)">删除</button>
+              </div>
+            } @else {
+              <div class="form-group">
+                <label>姓名</label>
+                <input [(ngModel)]="editingUser.name" placeholder="姓名">
+              </div>
+              <div class="form-group">
+                <label>用户名</label>
+                <input [(ngModel)]="editingUser.username" placeholder="用户名">
+              </div>
+              <div class="form-group">
+                <label>邮箱</label>
+                <input [(ngModel)]="editingUser.email" placeholder="邮箱">
+              </div>
+              <div class="actions">
+                <button class="btn btn-success" (click)="saveEdit()">保存</button>
+                <button class="btn btn-secondary" (click)="cancelEdit()">取消</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
 
-    <!--
-      删除确认模态框
-      @if 新语法替代 *ngIf
-    -->
     @if (showDeleteModal) {
       <div class="modal-overlay" (click)="closeDeleteModal($event)">
-        <!-- (click)="$event.stopPropagation()" 阻止事件冒泡 -->
         <div class="modal" (click)="$event.stopPropagation()">
           <h3>确认删除</h3>
-          <!-- ?. 是可选链操作符，防止userToDelete为null时报错 -->
           <p>确定要删除用户 {{ userToDelete?.name }} 吗？</p>
           <div class="modal-actions">
             <button class="btn btn-secondary" (click)="showDeleteModal = false">取消</button>
@@ -129,11 +134,11 @@ import { UserService } from '../services/user.service';
 export class UserListComponent implements OnInit {
   /** 用户列表 */
   users: User[] = [];
-  /** 筛选后的用户列表（用于显示） */
+  /** 筛选后的用户列表 */
   filteredUsers: User[] = [];
   /** 搜索关键词 */
   searchTerm = '';
-  /** 当前编辑的用户（null表示未在编辑模式） */
+  /** 当前编辑的用户，null 表示非编辑模式 */
   editingUser: User | null = null;
   /** 新用户表单数据 */
   newUser: Partial<User> = { name: '', username: '', email: '' };
@@ -145,20 +150,34 @@ export class UserListComponent implements OnInit {
   sortByUsername = false;
   /** 是否启用邮箱筛选 */
   emailFilterActive = false;
+  /** 是否正在加载 */
+  isLoading = false;
 
   /**
-   * 依赖注入 UserService 和 Router
-   * TypeScript的访问修饰符(private/public)会自动创建类属性
+   * 依赖注入
+   *
+   * TypeScript 访问修饰符会自动创建类属性：
+   * - private userService: UserService → 创建私有属性 userService
+   * - public router: Router → 创建公共属性 router
    */
   constructor(
     private userService: UserService,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService
   ) {}
 
   /**
    * ngOnInit - 组件生命周期钩子
-   * 在组件初始化时自动调用
-   * 适合在这里发送初始数据请求
+   *
+   * 【生命周期钩子】
+   * Angular 组件有多个生命周期钩子，按执行顺序：
+   * constructor → ngOnInit → ngOnChanges → ngDoCheck → ...
+   *
+   * 【ngOnInit 用途】
+   * 适合在这里：
+   * - 发送初始数据请求
+   * - 初始化组件状态
+   * - 执行一次性设置逻辑
    */
   ngOnInit(): void {
     this.loadUsers();
@@ -166,14 +185,38 @@ export class UserListComponent implements OnInit {
 
   /** 加载所有用户 */
   loadUsers(): void {
-    /** subscribe - 订阅Observable，接收数据 */
-    this.userService.getUsers().subscribe(users => {
-      this.users = users;
-      this.filteredUsers = users;
+    this.isLoading = true;
+
+    /**
+     * subscribe - 订阅 Observable
+     *
+     * 【RxJS Observable】
+     * HttpClient.get() 返回 Observable，而非 Promise
+     * Observable 是 RxJS 的核心概念，支持：
+     * - 同步/异步数据流
+     * - 多个值发射
+     * - 强大的操作符（map、filter、catchError 等）
+     *
+     * 【订阅模式】
+     * Observable 被订阅前不会执行
+     * subscribe() 触发请求，callback 处理响应
+     *
+     * 【错误处理】
+     * 使用对象形式的 subscribe 可以分别处理 next、error 回调
+     */
+    this.userService.getUsers().subscribe({
+      next: (users) => {
+        this.users = users;
+        this.filteredUsers = users;
+        this.isLoading = false;
+      },
+      error: () => {
+        this.isLoading = false;
+      }
     });
   }
 
-  /** 搜索用户（按姓名或用户名） */
+  /** 搜索用户 */
   searchUsers(): void {
     this.applyFilters();
   }
@@ -195,17 +238,17 @@ export class UserListComponent implements OnInit {
     this.searchTerm = '';
     this.sortByUsername = false;
     this.emailFilterActive = false;
-    this.filteredUsers = [...this.users];  // 创建新数组，避免修改原数组
+    /** [...this.users] 创建新数组，避免修改原数组 */
+    this.filteredUsers = [...this.users];
   }
 
   /**
    * 应用所有筛选条件
-   * 使用管道式处理：先搜索，再筛选邮箱，最后排序
+   * 管道式处理：搜索 → 筛选 → 排序
    */
   applyFilters(): void {
     let result = [...this.users];
 
-    // 搜索过滤
     if (this.searchTerm) {
       const term = this.searchTerm.toLowerCase();
       result = result.filter(user =>
@@ -214,13 +257,12 @@ export class UserListComponent implements OnInit {
       );
     }
 
-    // 邮箱前缀过滤（筛选S开头的邮箱）
     if (this.emailFilterActive) {
       result = result.filter(user => user.email.toLowerCase().startsWith('s'));
     }
 
-    // 用户名排序
     if (this.sortByUsername) {
+      /** localeCompare 用于字符串本地化排序 */
       result.sort((a, b) => a.username.localeCompare(b.username));
     }
 
@@ -229,40 +271,37 @@ export class UserListComponent implements OnInit {
 
   /** 添加新用户 */
   addUser(): void {
-    // 表单验证
+    /** 表单验证 */
     if (!this.newUser.name || !this.newUser.username || !this.newUser.email) {
-      alert('请填写所有字段');
+      this.toastService.warning('请填写所有字段');
       return;
     }
 
-    // 创建用户对象（使用时间戳作为临时ID）
-    const user: User = {
-      id: Date.now(),
+    /** 创建用户对象（不含 id，由后端生成） */
+    const userData = {
       name: this.newUser.name!,
       username: this.newUser.username!,
       email: this.newUser.email!
     };
 
-    // 调用服务创建用户
-    this.userService.createUser(user).subscribe({
-      next: () => {
-        // 成功后将新用户添加到列表开头
-        this.users.unshift(user);
+    this.userService.createUser(userData).subscribe({
+      next: (createdUser) => {
+        /** unshift 添加到数组开头 */
+        this.users.unshift(createdUser);
         this.applyFilters();
-        // 重置表单
         this.newUser = { name: '', username: '', email: '' };
-        alert('用户新增成功！');
+        this.toastService.success('用户新增成功！');
       },
       error: (err) => {
         console.error('创建用户失败', err);
-        alert('创建用户失败，请重试');
+        this.toastService.error('创建用户失败，请重试');
       }
     });
   }
 
   /** 开始编辑用户 */
   startEdit(user: User): void {
-    // 使用展开运算符创建用户副本，避免直接修改原对象
+    /** 展开运算符创建浅拷贝，避免直接修改原对象 */
     this.editingUser = { ...user };
   }
 
@@ -272,18 +311,18 @@ export class UserListComponent implements OnInit {
 
     this.userService.updateUser(this.editingUser).subscribe({
       next: () => {
-        // 更新列表中的用户数据
+        /** findIndex 查找并更新用户数据 */
         const index = this.users.findIndex(u => u.id === this.editingUser!.id);
         if (index !== -1) {
           this.users[index] = { ...this.editingUser! };
           this.applyFilters();
         }
         this.editingUser = null;
-        alert('用户更新成功！');
+        this.toastService.success('用户更新成功！');
       },
       error: (err) => {
         console.error('更新用户失败', err);
-        alert('更新用户失败，请重试');
+        this.toastService.error('更新用户失败，请重试');
       }
     });
   }
@@ -301,7 +340,7 @@ export class UserListComponent implements OnInit {
 
   /** 关闭删除确认框 */
   closeDeleteModal(event: Event): void {
-    // 点击遮罩层时关闭
+    /** 点击遮罩层时关闭 */
     if ((event.target as Element).classList.contains('modal-overlay')) {
       this.showDeleteModal = false;
     }
@@ -313,16 +352,16 @@ export class UserListComponent implements OnInit {
 
     this.userService.deleteUser(this.userToDelete.id).subscribe({
       next: () => {
-        // 从列表中移除用户
+        /** filter 创建新数组，排除要删除的用户 */
         this.users = this.users.filter(u => u.id !== this.userToDelete!.id);
         this.applyFilters();
         this.showDeleteModal = false;
         this.userToDelete = null;
-        alert('用户删除成功！');
+        this.toastService.success('用户删除成功！');
       },
       error: (err) => {
         console.error('删除用户失败', err);
-        alert('删除用户失败，请重试');
+        this.toastService.error('删除用户失败，请重试');
       }
     });
   }

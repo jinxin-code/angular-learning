@@ -1,175 +1,3 @@
-# UserManagement
-
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.24.
-
-## Project Structure
-
-```
-angular-learning/
-├── src/              # Angular frontend
-├── backend/          # NestJS backend
-│   ├── src/
-│   │   ├── users/    # User-related modules
-│   │   └── events/   # SSE event controller
-├── database.sqlite   # SQLite database
-└── README.md
-```
-
-## Technology Stack
-
-- **Frontend**: Angular 19, TypeScript, RxJS
-- **Backend**: NestJS, TypeORM, SQLite
-- **API**: RESTful API + Server-Sent Events (SSE)
-
-## Development Server
-
-### Frontend
-
-To start the Angular development server, run:
-
-```bash
-ng serve
-```
-
-Open your browser and navigate to `http://localhost:4200/` (or the port shown in the terminal). The application will automatically reload when you modify any source files.
-
-### Backend
-
-To start the NestJS development server, run:
-
-```bash
-cd backend
-npm run start:dev
-```
-
-The backend server will run on `http://localhost:3000/`.
-
-## API Switching Mechanism
-
-The frontend automatically switches between two API sources:
-
-1. **Local API**: `http://localhost:3000/users` (NestJS backend with SQLite)
-2. **Fallback API**: `https://jsonplaceholder.typicode.com/users` (public API)
-
-### How It Works
-
-- **SSE Notification**: When the backend starts, it sends an SSE notification to the frontend
-- **Automatic Switching**: The frontend switches to the local API when it receives the notification
-- **Fallback Mechanism**: If the backend is not available, the frontend uses the fallback API
-- **Periodic Check**: If SSE fails or browser doesn't support SSE, the frontend checks the backend status every 60 seconds
-
-### Browser Compatibility
-
-EventSource (SSE) browser support:
-
-| Browser | Support |
-|---------|---------|
-| Chrome | 6+ ✅ |
-| Firefox | 6+ ✅ |
-| Safari | 5.1+ ✅ |
-| Edge | 79+ ✅ |
-| Opera | 11.6+ ✅ |
-| iOS Safari | 4.2+ ✅ |
-| **Internet Explorer** | **Not supported** ❌ |
-
-> **Note**: If the browser doesn't support SSE or SSE connection fails, the system falls back to periodic checking every 60 seconds.
-
-## Database
-
-The backend uses SQLite for data persistence:
-
-- Database file: `backend/database.sqlite`
-- TypeORM for database operations
-- Automatic schema synchronization
-
-## Code Scaffolding
-
-### Frontend (Angular)
-
-To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics, run:
-
-```bash
-ng generate --help
-```
-
-### Backend (NestJS)
-
-To generate a new module, run:
-
-```bash
-cd backend
-nest generate module module-name
-```
-
-## Building
-
-### Frontend
-
-To build the Angular project, run:
-
-```bash
-ng build
-```
-
-Build artifacts will be stored in the `dist/` directory.
-
-### Backend
-
-To build the NestJS project, run:
-
-```bash
-cd backend
-npm run build
-```
-
-## Testing
-
-### Frontend
-
-To run unit tests:
-
-```bash
-ng test
-```
-
-### Backend
-
-To run backend tests:
-
-```bash
-cd backend
-npm run test
-```
-
-## API Endpoints
-
-### User API
-
-- `GET /users` - Get all users
-- `GET /users/:id` - Get user by ID
-- `POST /users` - Create new user
-- `PATCH /users/:id` - Update user
-- `DELETE /users/:id` - Delete user
-
-### Events API
-
-- `GET /events/stream` - SSE event stream for backend status notification
-
-## Additional Resources
-
-- [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli)
-- [NestJS Documentation](https://docs.nestjs.com/)
-- [TypeORM Documentation](https://typeorm.io/)
-- [Server-Sent Events (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
-
----
-
 # 用户管理
 
 本项目基于 [Angular CLI](https://github.com/angular/angular-cli) 19.2.24 版本生成。
@@ -178,57 +6,83 @@ npm run test
 
 ```
 angular-learning/
-├── src/              # Angular 前端
-├── backend/          # NestJS 后端
+├── src/                          # Angular 前端
+│   ├── app/
+│   │   ├── toast/               # Toast 通知组件
+│   │   ├── services/            # 用户服务
+│   │   ├── user-list/           # 用户列表组件
+│   │   └── user-detail/         # 用户详情组件
+├── backend/                      # NestJS 后端
 │   ├── src/
-│   │   ├── users/    # 用户相关模块
-│   │   └── events/   # SSE 事件控制器
-├── database.sqlite   # SQLite 数据库
+│   │   ├── users/               # 用户相关模块
+│   │   └── events/             # SSE 事件控制器
+├── database.sqlite              # SQLite 数据库
 └── README.md
 ```
 
 ## 技术栈
 
-- **前端**: Angular 19, TypeScript, RxJS
-- **后端**: NestJS, TypeORM, SQLite
+- **前端**: Angular 19, TypeScript, RxJS, Angular Router
+- **后端**: NestJS 11, TypeORM, SQLite
 - **API**: RESTful API + Server-Sent Events (SSE)
 
-## 开发服务器
+## 快速开始
 
-### 前端
-
-启动 Angular 开发服务器，请运行：
+### 1. 安装依赖
 
 ```bash
-ng serve
+# 前端依赖
+npm install
+
+# 后端依赖
+cd backend && npm install
 ```
 
-打开浏览器并访问 `http://localhost:4200/`（或终端中显示的端口）。当你修改源代码时，应用会自动重新加载。
+### 2. 启动服务
 
-### 后端
+**终端 1 - 前端 (Angular)**:
+```bash
+npm start
+# 访问: http://localhost:4200
+```
 
-启动 NestJS 开发服务器，请运行：
-
+**终端 2 - 后端 (NestJS)**:
 ```bash
 cd backend
 npm run start:dev
+# 访问: http://localhost:3000
 ```
 
-后端服务器将在 `http://localhost:3000/` 上运行。
+## 功能特性
 
-## API 切换机制
+### 用户管理
+- 用户列表展示，支持搜索和筛选
+- 创建、编辑、删除用户
+- 用户详情查看
+
+### Toast 通知
+- 四种消息类型：success、error、warning、info
+- 3秒后自动消失
+- 支持手动关闭
+
+### 加载状态
+- 数据加载时显示旋转动画
+- 用户友好的加载提示
+
+### API 切换机制
 
 前端会自动在两个 API 源之间切换：
 
 1. **本地 API**: `http://localhost:3000/users`（带 SQLite 的 NestJS 后端）
 2. **备用 API**: `https://jsonplaceholder.typicode.com/users`（公共 API）
 
-### 工作原理
+#### 工作原理
 
-- **SSE 通知**: 后端启动时，通过 Server-Sent Events 向前端发送通知
-- **自动切换**: 前端收到通知后切换到本地 API
+- **SSE 连接**: 后端启动时与前端建立 SSE 连接
+- **心跳机制**: 后端每 30 秒发送心跳消息保持连接活跃
+- **自动切换**: 前端收到后端启动通知后切换到本地 API
 - **备用机制**: 如果后端不可用，前端使用备用 API
-- **定期检查**: 如果 SSE 失败或浏览器不支持 SSE，前端每 60 秒检查一次后端状态
+- **定期检查**: 如果 SSE 不支持或连接失败，前端每 60 秒检查一次后端状态
 
 ### 浏览器兼容性
 
@@ -244,98 +98,268 @@ EventSource (SSE) 浏览器支持情况：
 | iOS Safari | 4.2+ ✅ |
 | **Internet Explorer** | **全系列不支持** ❌ |
 
-> **注意**: 如果浏览器不支持 SSE 或 SSE 连接失败，系统会回退到每 60 秒定期检查一次。
-
 ## 数据库
 
 后端使用 SQLite 进行数据持久化：
 
 - 数据库文件: `backend/database.sqlite`
 - TypeORM 用于数据库操作
-- 自动同步表结构
-
-## 代码脚手架
-
-### 前端（Angular）
-
-生成新组件，请运行：
-
-```bash
-ng generate component component-name
-```
-
-获取所有可用生成器的完整列表，请运行：
-
-```bash
-ng generate --help
-```
-
-### 后端（NestJS）
-
-生成新模块，请运行：
-
-```bash
-cd backend
-nest generate module module-name
-```
-
-## 构建
-
-### 前端
-
-构建 Angular 项目，请运行：
-
-```bash
-ng build
-```
-
-构建产物将存储在 `dist/` 目录中。
-
-### 后端
-
-构建 NestJS 项目，请运行：
-
-```bash
-cd backend
-npm run build
-```
-
-## 测试
-
-### 前端
-
-运行单元测试：
-
-```bash
-ng test
-```
-
-### 后端
-
-运行后端测试：
-
-```bash
-cd backend
-npm run test
-```
+- 开发环境自动同步表结构
 
 ## API 端点
 
 ### 用户 API
 
-- `GET /users` - 获取所有用户
-- `GET /users/:id` - 根据 ID 获取用户
-- `POST /users` - 创建新用户
-- `PATCH /users/:id` - 更新用户
-- `DELETE /users/:id` - 删除用户
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | `/users` | 获取所有用户 |
+| GET | `/users/:id` | 根据 ID 获取用户 |
+| POST | `/users` | 创建新用户 |
+| PATCH | `/users/:id` | 更新用户 |
+| DELETE | `/users/:id` | 删除用户 |
 
 ### 事件 API
 
-- `GET /events/stream` - SSE 事件流，用于后端状态通知
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | `/events/stream` | SSE 事件流，用于实时通知 |
+
+## 代码脚手架
+
+### 前端（Angular）
+
+```bash
+ng generate component component-name
+ng generate service service-name
+ng generate directive directive-name
+```
+
+### 后端（NestJS）
+
+```bash
+cd backend
+nest generate module module-name
+nest generate controller controller-name
+nest generate service service-name
+nest generate resource resource-name
+```
+
+## 构建
+
+### 前端
+```bash
+npm run build
+# 输出目录: dist/user-management/
+```
+
+### 后端
+```bash
+cd backend
+npm run build
+# 输出目录: dist/
+```
+
+## 测试
+
+### 前端
+```bash
+npm test
+```
+
+### 后端
+```bash
+cd backend
+npm run test
+npm run test:e2e
+```
 
 ## 更多资源
 
-- [Angular CLI 概述与命令参考](https://angular.dev/tools/cli)
+- [Angular CLI 概述](https://angular.dev/tools/cli)
 - [NestJS 文档](https://docs.nestjs.com/)
 - [TypeORM 文档](https://typeorm.io/)
 - [Server-Sent Events (MDN)](https://developer.mozilla.org/zh-CN/docs/Web/API/Server-sent_events)
+
+---
+
+# UserManagement
+
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.24.
+
+## Project Structure
+
+```
+angular-learning/
+├── src/                          # Angular frontend
+│   ├── app/
+│   │   ├── toast/               # Toast notification component
+│   │   ├── services/            # User service
+│   │   ├── user-list/           # User list component
+│   │   └── user-detail/         # User detail component
+├── backend/                      # NestJS backend
+│   ├── src/
+│   │   ├── users/               # User-related modules
+│   │   └── events/             # SSE event controller
+├── database.sqlite              # SQLite database
+└── README.md
+```
+
+## Technology Stack
+
+- **Frontend**: Angular 19, TypeScript, RxJS, Angular Router
+- **Backend**: NestJS 11, TypeORM, SQLite
+- **API**: RESTful API + Server-Sent Events (SSE)
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+# Frontend dependencies
+npm install
+
+# Backend dependencies
+cd backend && npm install
+```
+
+### 2. Start Servers
+
+**Terminal 1 - Frontend (Angular)**:
+```bash
+npm start
+# Access: http://localhost:4200
+```
+
+**Terminal 2 - Backend (NestJS)**:
+```bash
+cd backend
+npm run start:dev
+# Access: http://localhost:3000
+```
+
+## Features
+
+### User Management
+- View user list with search and filter
+- Create, edit, and delete users
+- View user details
+
+### Toast Notifications
+- Success, error, warning, and info message types
+- Auto-dismiss after 3 seconds
+- Manual dismiss available
+
+### Loading States
+- Spinner animation during data loading
+- User-friendly loading indicators
+
+### API Switching Mechanism
+
+The frontend automatically switches between two API sources:
+
+1. **Local API**: `http://localhost:3000/users` (NestJS backend with SQLite)
+2. **Fallback API**: `https://jsonplaceholder.typicode.com/users` (public API)
+
+#### How It Works
+
+- **SSE Connection**: When backend starts, it establishes an SSE connection with the frontend
+- **Heartbeat**: Backend sends heartbeat messages every 30 seconds to keep the connection alive
+- **Automatic Switching**: Frontend switches to local API upon receiving SSE notification
+- **Fallback**: If backend is unavailable, frontend uses the fallback API
+- **Polling**: If SSE is not supported or connection fails, frontend checks backend status every 60 seconds
+
+### Browser Compatibility
+
+EventSource (SSE) browser support:
+
+| Browser | Support |
+|---------|---------|
+| Chrome | 6+ ✅ |
+| Firefox | 6+ ✅ |
+| Safari | 5.1+ ✅ |
+| Edge | 79+ ✅ |
+| Opera | 11.6+ ✅ |
+| iOS Safari | 4.2+ ✅ |
+| **Internet Explorer** | **Not supported** ❌ |
+
+## Database
+
+The backend uses SQLite for data persistence:
+
+- Database file: `backend/database.sqlite`
+- TypeORM for database operations
+- Automatic schema synchronization (`synchronize: true` for development)
+
+## API Endpoints
+
+### User API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users` | Get all users |
+| GET | `/users/:id` | Get user by ID |
+| POST | `/users` | Create new user |
+| PATCH | `/users/:id` | Update user |
+| DELETE | `/users/:id` | Delete user |
+
+### Events API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/events/stream` | SSE event stream for real-time notifications |
+
+## Code Scaffolding
+
+### Frontend (Angular)
+
+```bash
+ng generate component component-name
+ng generate service service-name
+ng generate directive directive-name
+```
+
+### Backend (NestJS)
+
+```bash
+cd backend
+nest generate module module-name
+nest generate controller controller-name
+nest generate service service-name
+nest generate resource resource-name
+```
+
+## Building
+
+### Frontend
+```bash
+npm run build
+# Output: dist/user-management/
+```
+
+### Backend
+```bash
+cd backend
+npm run build
+# Output: dist/
+```
+
+## Testing
+
+### Frontend
+```bash
+npm test
+```
+
+### Backend
+```bash
+cd backend
+npm run test
+npm run test:e2e
+```
+
+## Additional Resources
+
+- [Angular CLI Overview](https://angular.dev/tools/cli)
+- [NestJS Documentation](https://docs.nestjs.com/)
+- [TypeORM Documentation](https://typeorm.io/)
+- [Server-Sent Events (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
