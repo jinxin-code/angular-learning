@@ -1,27 +1,28 @@
 /**
  * AppComponent - 应用根组件
  *
- * ===== Angular 17+ 新特性 =====
+ * ===== Angular 信号 (Signal) 改造 =====
  *
- * 1. Standalone Component（独立组件）
- *    standalone: true 表示这是一个独立组件，不需要在 NgModule 中声明
- *    这是 Angular 14+ 引入的特性，Angular 17+ 中成为默认和推荐方式
+ * 原实现：constructor 注入 ToastService → subscribe(messages$) → 赋值 toastMessages
+ * 现实现：直接读取 ToastService 的 messages signal，模板里用 messages()
  *
- * 2. 直接导入依赖
- *    旧方式需要在 @NgModule.imports 中声明依赖
- *    新方式直接在组件的 imports 数组中导入所需的指令/组件
+ * 【收益】
+ * - 无需 subscribe / 无需手动退订
+ * - signal 变化时模板自动重渲染（zone.js + signal 双重驱动）
+ * - 代码更少、更不容易内存泄漏
+ *
+ * ===== Standalone Component（独立组件）=====
+ * Angular 19+ 起 standalone 默认为 true，可省略该字段
  */
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 /** RouterOutlet - 路由出口指令，标记路由内容显示的位置 */
 import { RouterOutlet } from '@angular/router';
 
 import { ToastComponent } from './toast/toast.component';
 import { ToastService } from './toast/toast.service';
-import { ToastMessage } from './toast/toast.component';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
 
   /**
    * imports 数组 - Angular 17+ 新特性
@@ -62,33 +63,30 @@ import { ToastMessage } from './toast/toast.component';
       <router-outlet></router-outlet>
     </div>
 
-    <!-- Toast 消息提示组件 - 全局通知层 -->
-    <app-toast [messages]="toastMessages"></app-toast>
+    <!--
+      Toast 消息提示组件 - 全局通知层
+      直接把 ToastService 的 signal 传给子组件的 input()
+      messages() 读取 signal 当前值；signal 变化时此绑定自动更新
+    -->
+    <app-toast [messages]="toastService.messages()" />
   `
 })
 export class AppComponent {
   /** 应用标题 */
   title = 'user-management';
 
-  /** Toast 消息列表 */
-  toastMessages: ToastMessage[] = [];
-
   /**
-   * 依赖注入 - 构造函数方式
+   * inject() - 函数式依赖注入（Angular 14+）
    *
-   * Angular 的依赖注入（DI）系统会自动解析并注入所需的服务
-   * TypeScript 的访问修饰符（private/public）会自动创建类属性
+   * 【对比构造函数注入】
+   * - 构造函数：constructor(private toastService: ToastService)
+   * - inject 函数：toastService = inject(ToastService)
    *
-   * 【注入方式对比】
-   * 方式1（构造函数注入）：constructor(private toastService: ToastService)
-   * 方式2（inject 函数）：toastService = inject(ToastService)
+   * 【推荐 inject 的场景】
+   * - 与 signal/computed 组合更自然（字段初始化即可用）
+   * - 继承场景下子类无需重写构造函数
    *
-   * 【推荐】
-   * 两种方式都可以，inject 函数在需要延迟初始化或条件注入时更灵活
+   * 这里直接暴露 toastService，模板读取其 messages signal
    */
-  constructor(private toastService: ToastService) {
-    this.toastService.messages$.subscribe(messages => {
-      this.toastMessages = messages;
-    });
-  }
+  toastService = inject(ToastService);
 }

@@ -1,18 +1,21 @@
 /**
  * ToastService - Toast 消息服务
  *
- * ===== Angular 依赖注入 (DI) =====
+ * ===== Angular 信号 (Signal) 改造 =====
  *
- * 服务使用 @Injectable({ providedIn: 'root' })
- * 整个应用共享单例，通过构造函数注入到组件
+ * 原实现使用 RxJS BehaviorSubject 持有消息列表，组件需要 subscribe。
+ * 现改用 signal() 持有状态，组件可直接读取 signal（无需订阅/退订）。
  *
- * ===== RxJS Subject =====
+ * 【signal vs BehaviorSubject】
+ * - signal 更轻量，专为「响应式状态」设计
+ * - 读取 signal() 会自动建立依赖，computed/模板会自动追踪
+ * - 无需手动 takeUntil/destroy，signal 本身随组件生命周期回收
  *
- * BehaviorSubject - 特殊 Subject，可以记住当前值
- * 新订阅者立即收到最新发射的值
+ * 【对外暴露】
+ * messages 是一个 WritableSignal，但约定外部只读。
+ * 写入统一走 success/error/warning/info/clear 等方法。
  */
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, signal } from '@angular/core';
 
 import { ToastMessage } from '../toast/toast.component';
 
@@ -20,10 +23,15 @@ import { ToastMessage } from '../toast/toast.component';
   providedIn: 'root'
 })
 export class ToastService {
-  /** BehaviorSubject 保持当前的消息列表 */
-  private messagesSubject = new BehaviorSubject<ToastMessage[]>([]);
-  /** 对外暴露的 Observable，组件可以订阅 */
-  messages$ = this.messagesSubject.asObservable();
+  /**
+   * messages - 消息列表 signal
+   *
+   * signal<T>(initial) 创建一个可写信号
+   * 读取值：messages()
+   * 写入值：messages.set(newValue) 或 messages.update(prev => newValue)
+   */
+  readonly messages = signal<ToastMessage[]>([]);
+
   /** 消息 ID 计数器 */
   private idCounter = 0;
 
@@ -72,13 +80,29 @@ export class ToastService {
       type
     };
 
-    /** 获取当前消息列表并添加新消息 */
-    const currentMessages = this.messagesSubject.getValue();
-    this.messagesSubject.next([...currentMessages, newMessage]);
+    /**
+     * signal.update(fn) - 基于前值更新信号
+     * 这里将新消息追加到列表末尾
+     */
+    this.messages.update(list => [...list, newMessage]);
   }
 
   /** 清空所有消息 */
   clear(): void {
-    this.messagesSubject.next([]);
+    this.messages.set([]);
+  }
+
+  /**
+   * 按 id 移除单条消息
+   *
+   * 【为何需要】
+   * ToastComponent 在 toast 被关闭/自动消失时回调此方法，
+   * 从源头删除该消息，使后续 effect 重新遍历时不再遇到该 id。
+   * 这样 ToastComponent 内的 scheduled 集合才可安全 delete，
+   * 避免「已消失的 toast 在新增其他 toast 时被重新加入」的 bug，
+   * 同时修复 messages 列表无限累积的内存增长问题。
+   */
+  remove(id: number): void {
+    this.messages.update(list => list.filter(m => m.id !== id));
   }
 }

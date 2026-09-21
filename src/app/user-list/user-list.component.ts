@@ -1,29 +1,39 @@
 /**
  * UserListComponent - 用户列表组件
  *
- * ===== Angular 17+ 新特性 - 控制流指令 =====
+ * ===== Angular 信号 (Signal) 改造 =====
  *
- * 本组件展示了 Angular 17 引入的新控制流语法：
+ * 本组件演示 signal 体系的核心三件套：
  *
- * 1. @if / @else - 条件渲染
- *    替代旧的 *ngIf 指令，语法更简洁
+ * 1. signal() - 可写状态
+ *    users / searchTerm / sortByUsername / emailFilterActive / isLoading
+ *    / showDeleteModal / userToDelete 都改为 signal
  *
- * 2. @for - 循环渲染
- *    替代旧的 *ngFor 指令
+ * 2. computed() - 派生状态（关键收益）
+ *    filteredUsers = computed(() => 基于 users/searchTerm/... 计算)
+ *    → 任意依赖 signal 变化时自动重算，无需手动调用 applyFilters()
+ *    原实现里每次 add/edit/delete/search/sort/filter 都要手动 applyFilters()，
+ *    现在完全交给 computed 自动追踪依赖，更不易出 bug
  *
- * 3. @switch - 条件切换
- *    替代旧的 *ngSwitch 指令
+ * 3. 模板中读取 signal 需调用：users()、filteredUsers()、isLoading() 等
+ *
+ * ===== 仍保留为普通字段的场景 =====
+ * - newUser / editingUser：表单字段，通过 [(ngModel)] 双向绑定到对象属性，
+ *   ngModel 对 signal 没有原生双向支持，故保留普通对象（zone.js 驱动 CD）
+ *
+ * ===== Angular 17+ 控制流指令 =====
+ * @if / @for / @else 仍照常使用（控制流本身与 signal 无冲突）
  *
  * ===== Standalone Component =====
- * standalone: true 表示这是独立组件，无需 NgModule
+ * Angular 19+ 起 standalone 默认为 true，可省略 standalone 字段
  */
-import { Component, OnInit } from '@angular/core';
-/** FormsModule 提供双向数据绑定 [(ngModel)] */
+import { Component, OnInit, computed, signal } from '@angular/core';
+/** FormsModule 提供 ngModel 指令（双向数据绑定） */
 import { FormsModule } from '@angular/forms';
-/** CommonModule 提供 ngModel 等指令 */
+/** CommonModule 提供部分内置指令（此处保留兼容） */
 import { CommonModule } from '@angular/common';
-/** RouterLink 用于声明式路由导航，替代旧的 routerLink 属性绑定 */
-import { Router, RouterLink } from '@angular/router';
+/** RouterLink 用于声明式路由导航 */
+import { RouterLink } from '@angular/router';
 
 import { User } from '../models/user';
 import { UserService } from '../services/user.service';
@@ -31,7 +41,6 @@ import { ToastService } from '../toast/toast.service';
 
 @Component({
   selector: 'app-user-list',
-  standalone: true,
 
   imports: [FormsModule, CommonModule, RouterLink],
 
@@ -40,6 +49,7 @@ import { ToastService } from '../toast/toast.service';
     <div class="card add-user-form">
       <h3>新增用户</h3>
 
+      <!-- newUser 仍是普通对象，[(ngModel)] 双向绑定到其属性 -->
       <div class="form-group">
         <label>姓名</label>
         <input [(ngModel)]="newUser.name" placeholder="请输入姓名">
@@ -59,31 +69,38 @@ import { ToastService } from '../toast/toast.service';
     <div class="card">
       <div class="filters">
         <div class="search-box">
+          <!--
+            信号与 ngModel 的协作：
+            [ngModel]="searchTerm()" 读取 signal 当前值
+            (ngModelChange)="searchTerm.set($event)" 写回 signal
+            一旦 searchTerm 变化，下方 filteredUsers computed 自动重算
+            —— 无需再写 (input)="searchUsers()" 这样的手动触发
+          -->
           <input type="text"
-                 [(ngModel)]="searchTerm"
-                 (input)="searchUsers()"
+                 [ngModel]="searchTerm()"
+                 (ngModelChange)="searchTerm.set($event)"
                  placeholder="搜索姓名或用户名...">
         </div>
         <div class="filter-buttons">
           <button class="btn btn-secondary" (click)="toggleSortByUsername()">
-            {{ sortByUsername ? '取消排序' : '按用户名排序' }}
+            {{ sortByUsername() ? '取消排序' : '按用户名排序' }}
           </button>
           <button class="btn btn-secondary" (click)="toggleEmailFilter()">
-            {{ emailFilterActive ? '取消邮箱筛选' : '邮箱S开头筛选' }}
+            {{ emailFilterActive() ? '取消邮箱筛选' : '邮箱S开头筛选' }}
           </button>
           <button class="btn btn-secondary" (click)="resetFilters()">重置</button>
         </div>
       </div>
     </div>
 
-    @if (isLoading) {
+    @if (isLoading()) {
       <div class="loading-container">
         <div class="loading-spinner"></div>
         <p>加载中...</p>
       </div>
     } @else {
       <div class="user-grid">
-        @for (user of filteredUsers; track user.id) {
+        @for (user of filteredUsers(); track user.id) {
           <div class="user-card">
             @if (!editingUser || editingUser.id !== user.id) {
               <h3>{{ user.name }}</h3>
@@ -117,13 +134,13 @@ import { ToastService } from '../toast/toast.service';
       </div>
     }
 
-    @if (showDeleteModal) {
+    @if (showDeleteModal()) {
       <div class="modal-overlay" (click)="closeDeleteModal($event)">
         <div class="modal" (click)="$event.stopPropagation()">
           <h3>确认删除</h3>
-          <p>确定要删除用户 {{ userToDelete?.name }} 吗？</p>
+          <p>确定要删除用户 {{ userToDelete()?.name }} 吗？</p>
           <div class="modal-actions">
-            <button class="btn btn-secondary" (click)="showDeleteModal = false">取消</button>
+            <button class="btn btn-secondary" (click)="showDeleteModal.set(false)">取消</button>
             <button class="btn btn-danger" (click)="deleteUser()">确认删除</button>
           </div>
         </div>
@@ -132,52 +149,85 @@ import { ToastService } from '../toast/toast.service';
   `
 })
 export class UserListComponent implements OnInit {
+  /**
+   * ===== signal 状态字段 =====
+   * 读取：在 TS 中用 this.users()，在模板中用 users()
+   * 写入：this.users.set(newValue) 或 this.users.update(prev => newValue)
+   */
   /** 用户列表 */
-  users: User[] = [];
-  /** 筛选后的用户列表 */
-  filteredUsers: User[] = [];
+  readonly users = signal<User[]>([]);
   /** 搜索关键词 */
-  searchTerm = '';
+  readonly searchTerm = signal('');
+  /** 是否按用户名排序 */
+  readonly sortByUsername = signal(false);
+  /** 是否启用邮箱筛选 */
+  readonly emailFilterActive = signal(false);
+  /** 是否正在加载 */
+  readonly isLoading = signal(false);
+  /** 是否显示删除确认框 */
+  readonly showDeleteModal = signal(false);
+  /** 要删除的用户对象 */
+  readonly userToDelete = signal<User | null>(null);
+
+  /**
+   * computed - 派生 signal
+   *
+   * 【依赖追踪】
+   * 回调内读取的每个 signal（users()、searchTerm()、
+   * emailFilterActive()、sortByUsername()）都成为依赖
+   * 任一变化时，filteredUsers 自动重算
+   *
+   * 【对比原实现】
+   * 原来需要在 searchUsers/toggleSortByUsername/toggleEmailFilter
+   * /resetFilters/addUser/saveEdit/deleteUser 里手动调用 applyFilters()
+   * 现在全部删除 —— 增删改只需更新 users signal，列表自动同步
+   *
+   * 【惰性求值】
+   * computed 只在被读取时才计算，且结果会被缓存，
+   * 依赖未变化时多次读取只算一次
+   */
+  readonly filteredUsers = computed(() => {
+    let result = [...this.users()];
+
+    const term = this.searchTerm().toLowerCase().trim();
+    if (term) {
+      result = result.filter(user =>
+        user.name.toLowerCase().includes(term) ||
+        user.username.toLowerCase().includes(term)
+      );
+    }
+
+    if (this.emailFilterActive()) {
+      result = result.filter(user => user.email.toLowerCase().startsWith('s'));
+    }
+
+    if (this.sortByUsername()) {
+      /** localeCompare 用于字符串本地化排序 */
+      result.sort((a, b) => a.username.localeCompare(b.username));
+    }
+
+    return result;
+  });
+
+  /**
+   * 仍保留为普通对象的表单状态
+   * （ngModel 双向绑定到对象属性，无需 signal 驱动）
+   */
   /** 当前编辑的用户，null 表示非编辑模式 */
   editingUser: User | null = null;
   /** 新用户表单数据 */
   newUser: Partial<User> = { name: '', username: '', email: '' };
-  /** 是否显示删除确认框 */
-  showDeleteModal = false;
-  /** 要删除的用户对象 */
-  userToDelete: User | null = null;
-  /** 是否按用户名排序 */
-  sortByUsername = false;
-  /** 是否启用邮箱筛选 */
-  emailFilterActive = false;
-  /** 是否正在加载 */
-  isLoading = false;
 
   /**
-   * 依赖注入
-   *
-   * TypeScript 访问修饰符会自动创建类属性：
-   * - private userService: UserService → 创建私有属性 userService
-   * - public router: Router → 创建公共属性 router
+   * 依赖注入（构造函数方式，保留以与 inject() 写法形成对比）
    */
   constructor(
     private userService: UserService,
-    private router: Router,
     private toastService: ToastService
   ) {}
 
   /**
    * ngOnInit - 组件生命周期钩子
-   *
-   * 【生命周期钩子】
-   * Angular 组件有多个生命周期钩子，按执行顺序：
-   * constructor → ngOnInit → ngOnChanges → ngDoCheck → ...
-   *
-   * 【ngOnInit 用途】
-   * 适合在这里：
-   * - 发送初始数据请求
-   * - 初始化组件状态
-   * - 执行一次性设置逻辑
    */
   ngOnInit(): void {
     this.loadUsers();
@@ -185,88 +235,39 @@ export class UserListComponent implements OnInit {
 
   /** 加载所有用户 */
   loadUsers(): void {
-    this.isLoading = true;
+    this.isLoading.set(true);
 
     /**
-     * subscribe - 订阅 Observable
-     *
-     * 【RxJS Observable】
-     * HttpClient.get() 返回 Observable，而非 Promise
-     * Observable 是 RxJS 的核心概念，支持：
-     * - 同步/异步数据流
-     * - 多个值发射
-     * - 强大的操作符（map、filter、catchError 等）
-     *
-     * 【订阅模式】
-     * Observable 被订阅前不会执行
-     * subscribe() 触发请求，callback 处理响应
-     *
-     * 【错误处理】
-     * 使用对象形式的 subscribe 可以分别处理 next、error 回调
+     * HttpClient 返回 Observable，subscribe 触发请求
+     * 拿到数据后只需 set users signal，filteredUsers 会自动重算
      */
     this.userService.getUsers().subscribe({
       next: (users) => {
-        this.users = users;
-        this.filteredUsers = users;
-        this.isLoading = false;
+        this.users.set(users);
+        this.isLoading.set(false);
       },
       error: () => {
-        this.isLoading = false;
+        this.isLoading.set(false);
       }
     });
   }
 
-  /** 搜索用户 */
-  searchUsers(): void {
-    this.applyFilters();
-  }
-
-  /** 切换排序状态 */
+  /** 切换排序状态（不再需要手动 applyFilters） */
   toggleSortByUsername(): void {
-    this.sortByUsername = !this.sortByUsername;
-    this.applyFilters();
+    this.sortByUsername.update(v => !v);
   }
 
   /** 切换邮箱筛选状态 */
   toggleEmailFilter(): void {
-    this.emailFilterActive = !this.emailFilterActive;
-    this.applyFilters();
+    this.emailFilterActive.update(v => !v);
   }
 
   /** 重置所有筛选条件 */
   resetFilters(): void {
-    this.searchTerm = '';
-    this.sortByUsername = false;
-    this.emailFilterActive = false;
-    /** [...this.users] 创建新数组，避免修改原数组 */
-    this.filteredUsers = [...this.users];
-  }
-
-  /**
-   * 应用所有筛选条件
-   * 管道式处理：搜索 → 筛选 → 排序
-   */
-  applyFilters(): void {
-    let result = [...this.users];
-
-    if (this.searchTerm) {
-      const term = this.searchTerm.toLowerCase();
-      result = result.filter(user =>
-        user.name.toLowerCase().includes(term) ||
-        user.username.toLowerCase().includes(term)
-      );
-    }
-
-    if (this.emailFilterActive) {
-      result = result.filter(user => user.email.toLowerCase().startsWith('s'));
-    }
-
-    if (this.sortByUsername) {
-      /** localeCompare 用于字符串本地化排序 */
-      result.sort((a, b) => a.username.localeCompare(b.username));
-    }
-
-    this.filteredUsers = result;
+    this.searchTerm.set('');
+    this.sortByUsername.set(false);
+    this.emailFilterActive.set(false);
+    // users signal 未变，filteredUsers computed 自动重算为完整列表
   }
 
   /** 添加新用户 */
@@ -286,9 +287,11 @@ export class UserListComponent implements OnInit {
 
     this.userService.createUser(userData).subscribe({
       next: (createdUser) => {
-        /** unshift 添加到数组开头 */
-        this.users.unshift(createdUser);
-        this.applyFilters();
+        /**
+         * signal.update - 基于前值更新
+         * 新用户插到列表头部，filteredUsers computed 自动重算
+         */
+        this.users.update(list => [createdUser, ...list]);
         this.newUser = { name: '', username: '', email: '' };
         this.toastService.success('用户新增成功！');
       },
@@ -309,14 +312,16 @@ export class UserListComponent implements OnInit {
   saveEdit(): void {
     if (!this.editingUser) return;
 
-    this.userService.updateUser(this.editingUser).subscribe({
+    const editing = this.editingUser;
+    this.userService.updateUser(editing).subscribe({
       next: () => {
-        /** findIndex 查找并更新用户数据 */
-        const index = this.users.findIndex(u => u.id === this.editingUser!.id);
-        if (index !== -1) {
-          this.users[index] = { ...this.editingUser! };
-          this.applyFilters();
-        }
+        /**
+         * 不可变更新：返回新数组、替换对应项
+         * signal 需要新引用才能触发依赖更新
+         */
+        this.users.update(list =>
+          list.map(u => u.id === editing.id ? { ...editing } : u)
+        );
         this.editingUser = null;
         this.toastService.success('用户更新成功！');
       },
@@ -334,29 +339,29 @@ export class UserListComponent implements OnInit {
 
   /** 显示删除确认框 */
   confirmDelete(user: User): void {
-    this.userToDelete = user;
-    this.showDeleteModal = true;
+    this.userToDelete.set(user);
+    this.showDeleteModal.set(true);
   }
 
   /** 关闭删除确认框 */
   closeDeleteModal(event: Event): void {
     /** 点击遮罩层时关闭 */
     if ((event.target as Element).classList.contains('modal-overlay')) {
-      this.showDeleteModal = false;
+      this.showDeleteModal.set(false);
     }
   }
 
   /** 确认删除用户 */
   deleteUser(): void {
-    if (!this.userToDelete) return;
+    const target = this.userToDelete();
+    if (!target) return;
 
-    this.userService.deleteUser(this.userToDelete.id).subscribe({
+    this.userService.deleteUser(target.id).subscribe({
       next: () => {
-        /** filter 创建新数组，排除要删除的用户 */
-        this.users = this.users.filter(u => u.id !== this.userToDelete!.id);
-        this.applyFilters();
-        this.showDeleteModal = false;
-        this.userToDelete = null;
+        /** filter 创建新数组，排除要删除的用户，computed 自动重算 */
+        this.users.update(list => list.filter(u => u.id !== target.id));
+        this.showDeleteModal.set(false);
+        this.userToDelete.set(null);
         this.toastService.success('用户删除成功！');
       },
       error: (err) => {
