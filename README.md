@@ -1,6 +1,6 @@
 # 用户管理
 
-本项目基于 [Angular CLI](https://github.com/angular/angular-cli) 19.2.24 版本生成。
+本项目基于 [Angular CLI](https://github.com/angular/angular-cli) 22.1 版本生成，已升级到 Angular 22 并引入 Signal 响应式。
 
 ## 项目结构
 
@@ -22,9 +22,10 @@ angular-learning/
 
 ## 技术栈
 
-- **前端**: Angular 19, TypeScript, RxJS, Angular Router
+- **前端**: Angular 22, TypeScript 6.0, RxJS, Angular Router, Signals
 - **后端**: NestJS 11, TypeORM, SQLite
 - **API**: RESTful API + Server-Sent Events (SSE)
+- **构建**: @angular/build（esbuild/Vite，已从 webpack 版 @angular-devkit/build-angular 迁移）
 
 ## 快速开始
 
@@ -68,6 +69,19 @@ npm run start:dev
 ### 加载状态
 - 数据加载时显示旋转动画
 - 用户友好的加载提示
+
+### Signal 响应式改造
+
+前端已从传统 RxJS 订阅模式迁移到 Angular Signal 响应式体系：
+
+- `signal()` 持有可写状态（如 `users`、`isLoading`、`user`）
+- `computed()` 派生状态 —— `filteredUsers` 自动依赖 `users`/`searchTerm`/排序与筛选条件，无需手动调用 `applyFilters()`
+- `input()` 信号输入替代 `@Input()` 装饰器（ToastComponent）
+- `effect()` 响应副作用 —— Toast 收到新消息时自动入列并调度 3 秒消失
+- `ToastService` 由 `BehaviorSubject` 改为 `signal`，组件直接读取，无需 subscribe/退订
+- dismiss 时回写 `ToastService.remove(id)` 从源头清理，修复 `scheduled` 集合与消息列表的内存增长
+
+> 仍保留 zone.js 驱动变更检测；`newUser`/`editingUser` 等表单状态因 `[(ngModel)]` 双向绑定仍用普通对象。
 
 ### API 切换机制
 
@@ -176,6 +190,7 @@ npm run test:e2e
 ## 更多资源
 
 - [Angular CLI 概述](https://angular.dev/tools/cli)
+- [Angular Signals 文档](https://angular.dev/guide/signals)
 - [NestJS 文档](https://docs.nestjs.com/)
 - [TypeORM 文档](https://typeorm.io/)
 - [Server-Sent Events (MDN)](https://developer.mozilla.org/zh-CN/docs/Web/API/Server-sent_events)
@@ -184,7 +199,7 @@ npm run test:e2e
 
 # UserManagement
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.24.
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) and upgraded to Angular 22 with Signals.
 
 ## Project Structure
 
@@ -206,9 +221,10 @@ angular-learning/
 
 ## Technology Stack
 
-- **Frontend**: Angular 19, TypeScript, RxJS, Angular Router
+- **Frontend**: Angular 22, TypeScript 6.0, RxJS, Angular Router, Signals
 - **Backend**: NestJS 11, TypeORM, SQLite
 - **API**: RESTful API + Server-Sent Events (SSE)
+- **Build**: @angular/build (esbuild/Vite, migrated from webpack-based @angular-devkit/build-angular)
 
 ## Quick Start
 
@@ -252,6 +268,19 @@ npm run start:dev
 ### Loading States
 - Spinner animation during data loading
 - User-friendly loading indicators
+
+### Signal Reactive Refactor
+
+The frontend has migrated from the traditional RxJS subscription model to Angular's Signal reactivity:
+
+- `signal()` holds writable state (e.g. `users`, `isLoading`, `user`)
+- `computed()` derived state — `filteredUsers` auto-tracks `users`/`searchTerm`/sort & filter, no manual `applyFilters()` calls
+- `input()` signal inputs replace `@Input()` (ToastComponent)
+- `effect()` side effects — toast auto-enqueues and schedules 3s dismiss on new messages
+- `ToastService` switched from `BehaviorSubject` to `signal`; components read directly, no subscribe/unsubscribe
+- On dismiss, `ToastService.remove(id)` prunes the source, fixing `scheduled` set and message-list memory growth
+
+> zone.js change detection is retained; form state like `newUser`/`editingUser` still uses plain objects for `[(ngModel)]` two-way binding.
 
 ### API Switching Mechanism
 
@@ -360,6 +389,7 @@ npm run test:e2e
 ## Additional Resources
 
 - [Angular CLI Overview](https://angular.dev/tools/cli)
+- [Angular Signals Documentation](https://angular.dev/guide/signals)
 - [NestJS Documentation](https://docs.nestjs.com/)
 - [TypeORM Documentation](https://typeorm.io/)
 - [Server-Sent Events (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
