@@ -1,11 +1,15 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { App } from 'supertest/types';
+
 import { AppModule } from './../src/app.module';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+/**
+ * 端到端测试：通过真实的 HTTP 请求验证用户 API。
+ * 使用 supertest 启动完整的 Nest 应用，不依赖前端。
+ */
+describe('Users API (e2e)', () => {
+  let app: INestApplication;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,11 +20,13 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('GET /users 返回用户列表', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/users')
       .expect(200)
-      .expect('Hello World!');
+      .expect(res => {
+        expect(Array.isArray(res.body)).toBe(true);
+      });
   });
 
   afterEach(async () => {

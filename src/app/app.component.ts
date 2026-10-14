@@ -10,7 +10,7 @@ import { ToastService } from './toast/toast.service';
   template: `
     <div class="container">
       <div class="header">
-        <h1>用户管理系统</h1>
+        <h1>{{ title }}</h1>
       </div>
 
       <router-outlet></router-outlet>
@@ -20,6 +20,6 @@ import { ToastService } from './toast/toast.service';
   `,
 })
 export class AppComponent {
-  readonly title = 'user-management';
+  readonly title = '用户管理系统';
   readonly toastService = inject(ToastService);
 }

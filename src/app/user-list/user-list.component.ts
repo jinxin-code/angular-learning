@@ -206,7 +206,23 @@ export class UserListComponent {
     this.emailFilterActive.set(false);
   }
 
+  /**
+   * 备用 API（JSONPlaceholder）是只读的，写入会返回假成功但不持久化。
+   * 因此在 fallback 模式下直接拦截写操作，提示用户启动本地后端。
+   */
+  private ensureLocalApi(message: string): boolean {
+    if (this.userService.apiSource() === 'fallback') {
+      this.toastService.warning(message);
+      return false;
+    }
+    return true;
+  }
+
   addUser(): void {
+    if (!this.ensureLocalApi('后端服务未启动，无法新增用户')) {
+      return;
+    }
+
     const name = this.newUser.name.trim();
     const username = this.newUser.username.trim();
     const email = this.newUser.email.trim();
@@ -237,6 +253,10 @@ export class UserListComponent {
 
   saveEdit(): void {
     if (!this.editingUser) {
+      return;
+    }
+
+    if (!this.ensureLocalApi('后端服务未启动，无法修改用户')) {
       return;
     }
 
@@ -277,6 +297,12 @@ export class UserListComponent {
   deleteUser(): void {
     const target = this.userToDelete();
     if (!target) {
+      return;
+    }
+
+    if (!this.ensureLocalApi('后端服务未启动，无法删除用户')) {
+      this.showDeleteModal.set(false);
+      this.userToDelete.set(null);
       return;
     }
 

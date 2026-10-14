@@ -14,10 +14,10 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have the 'user-management' title`, () => {
+  it(`should have the app title`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('user-management');
+    expect(app.title).toEqual('用户管理系统');
   });
 
   it('should render the application heading', () => {

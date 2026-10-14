@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { SseController } from './events/sse.controller';
 import { UsersModule } from './users/users.module';
 
@@ -22,7 +20,6 @@ const synchronizeDatabase = process.env.DB_SYNCHRONIZE
     }),
     UsersModule,
   ],
-  controllers: [AppController, SseController],
-  providers: [AppService],
+  controllers: [SseController],
 })
 export class AppModule {}
