@@ -46,3 +46,8 @@ Thumbs.db
 /backend/.env
 /backend/.env.local
 /backend/.env.*.local
+
+# SQLite database files
+/backend/database.sqlite
+*.sqlite
+*.sqlite-journal
