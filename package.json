@@ -10,21 +10,21 @@
   },
   "private": true,
   "dependencies": {
-    "@angular/common": "^22.1.0",
-    "@angular/compiler": "^22.1.0",
-    "@angular/core": "^22.1.0",
-    "@angular/forms": "^22.1.0",
-    "@angular/platform-browser": "^22.1.0",
-    "@angular/router": "^22.1.0",
+    "@angular/common": "^22.2.2",
+    "@angular/compiler": "^22.2.2",
+    "@angular/core": "^22.2.2",
+    "@angular/forms": "^22.2.2",
+    "@angular/platform-browser": "^22.2.2",
+    "@angular/router": "^22.2.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
-    "@angular/build": "^22.1.0",
-    "@angular/cli": "^22.1.0",
-    "@angular/compiler-cli": "^22.1.0",
+    "@angular/build": "^22.2.2",
+    "@angular/cli": "^22.2.2",
+    "@angular/compiler-cli": "^22.2.2",
     "@types/jasmine": "~5.1.0",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
@@ -34,8 +34,7 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~6.0.0"
   },
-  "description": "This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.24.",
-  "main": "index.js",
+  "description": "基于 Angular 22 与 Signals 的用户管理示例应用",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kingjx13/angular-learning.git"
@@ -43,7 +42,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/kingjx13/angular-learning/issues"
   },

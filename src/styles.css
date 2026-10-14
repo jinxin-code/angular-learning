@@ -236,3 +236,12 @@ input:focus, select:focus {
   color: #666;
   font-size: 14px;
 }
+
+.error-card {
+  border-left: 4px solid #dc3545;
+}
+
+.error-card p {
+  margin-bottom: 15px;
+  color: #721c24;
+}

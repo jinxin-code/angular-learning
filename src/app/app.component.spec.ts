@@ -20,10 +20,10 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('user-management');
   });
 
-  it('should render title', () => {
+  it('should render the application heading', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, user-management');
+    expect(compiled.querySelector('h1')?.textContent).toContain('用户管理系统');
   });
 });

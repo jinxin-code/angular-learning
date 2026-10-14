@@ -1,395 +1,146 @@
 # 用户管理
 
-本项目基于 [Angular CLI](https://github.com/angular/angular-cli) 22.1 版本生成，已升级到 Angular 22 并引入 Signal 响应式。
+基于 Angular 22、Signals 与 NestJS 11 的全栈学习项目，包含用户增删改查、Toast 通知、SSE 服务状态通知和备用 API 降级。
 
 ## 项目结构
 
-```
+```text
 angular-learning/
-├── src/                          # Angular 前端
+├── src/                    # Angular 前端
 │   ├── app/
-│   │   ├── toast/               # Toast 通知组件
-│   │   ├── services/            # 用户服务
-│   │   ├── user-list/           # 用户列表组件
-│   │   └── user-detail/         # 用户详情组件
-├── backend/                      # NestJS 后端
+│   │   ├── models/         # 用户类型定义
+│   │   ├── services/       # 用户 API 与 API 源切换服务
+│   │   ├── toast/          # 全局 Toast 组件和服务
+│   │   ├── user-detail/    # 用户详情
+│   │   └── user-list/      # 用户列表、筛选和编辑
+│   └── environments/       # 前端运行配置
+├── backend/                # NestJS 后端
 │   ├── src/
-│   │   ├── users/               # 用户相关模块
-│   │   └── events/             # SSE 事件控制器
-├── database.sqlite              # SQLite 数据库
+│   │   ├── events/         # SSE 事件接口
+│   │   └── users/          # 用户模块、DTO、实体和服务
+│   └── database.sqlite     # SQLite 数据库文件（运行后生成/更新）
 └── README.md
 ```
 
 ## 技术栈
 
-- **前端**: Angular 22, TypeScript 6.0, RxJS, Angular Router, Signals
-- **后端**: NestJS 11, TypeORM, SQLite
-- **API**: RESTful API + Server-Sent Events (SSE)
-- **构建**: @angular/build（esbuild/Vite，已从 webpack 版 @angular-devkit/build-angular 迁移）
+- 前端：Angular 22、TypeScript、RxJS、Angular Router、Signals
+- 后端：NestJS 11、TypeORM、SQLite、class-validator
+- 实时通信：Server-Sent Events（SSE）
+- 构建：Angular CLI / `@angular/build`
 
 ## 快速开始
 
 ### 1. 安装依赖
 
 ```bash
-# 前端依赖
 npm install
-
-# 后端依赖
 cd backend && npm install
 ```
 
-### 2. 启动服务
+### 2. 启动后端
 
-**终端 1 - 前端 (Angular)**:
-```bash
-npm start
-# 访问: http://localhost:4200
-```
-
-**终端 2 - 后端 (NestJS)**:
 ```bash
 cd backend
 npm run start:dev
-# 访问: http://localhost:3000
 ```
+
+后端默认运行在：<http://localhost:3000>
+
+### 3. 启动前端
+
+回到项目根目录：
+
+```bash
+npm start
+```
+
+前端默认运行在：<http://localhost:4200>
 
 ## 功能特性
 
 ### 用户管理
-- 用户列表展示，支持搜索和筛选
-- 创建、编辑、删除用户
-- 用户详情查看
+
+- 用户列表、搜索、用户名排序和邮箱前缀筛选
+- 创建、编辑和删除用户
+- 查看用户详情
+- 加载中、加载失败和重试状态
 
 ### Toast 通知
-- 四种消息类型：success、error、warning、info
-- 3秒后自动消失
-- 支持手动关闭
 
-### 加载状态
-- 数据加载时显示旋转动画
-- 用户友好的加载提示
+- 支持 success、error、warning、info 四种类型
+- 3 秒后自动消失，也可以手动关闭
+- 使用 signal 保存全局消息状态
+- 自动清理定时器，避免组件销毁后继续执行
 
-### Signal 响应式改造
+### Signal 响应式
 
-前端已从传统 RxJS 订阅模式迁移到 Angular Signal 响应式体系：
+- `signal()` 保存用户列表、加载状态、弹窗状态等可写状态
+- `computed()` 自动派生筛选后的用户列表
+- `input()` 向 Toast 组件传递消息列表
+- `effect()` 监听 API 源变化并自动重新加载列表或详情
 
-- `signal()` 持有可写状态（如 `users`、`isLoading`、`user`）
-- `computed()` 派生状态 —— `filteredUsers` 自动依赖 `users`/`searchTerm`/排序与筛选条件，无需手动调用 `applyFilters()`
-- `input()` 信号输入替代 `@Input()` 装饰器（ToastComponent）
-- `effect()` 响应副作用 —— Toast 收到新消息时自动入列并调度 3 秒消失
-- `ToastService` 由 `BehaviorSubject` 改为 `signal`，组件直接读取，无需 subscribe/退订
-- dismiss 时回写 `ToastService.remove(id)` 从源头清理，修复 `scheduled` 集合与消息列表的内存增长
+### API 源自动切换
 
-> 仍保留 zone.js 驱动变更检测；`newUser`/`editingUser` 等表单状态因 `[(ngModel)]` 双向绑定仍用普通对象。
+前端在两个数据源之间切换：
 
-### API 切换机制
+1. 本地 API：`http://localhost:3000/users`
+2. 备用 API：`https://jsonplaceholder.typicode.com/users`
 
-前端会自动在两个 API 源之间切换：
+工作方式：
 
-1. **本地 API**: `http://localhost:3000/users`（带 SQLite 的 NestJS 后端）
-2. **备用 API**: `https://jsonplaceholder.typicode.com/users`（公共 API）
+- 默认先使用备用 API，因此后端未启动时页面仍可演示
+- 后端启动后通过 `/events/stream` 发送启动事件
+- SSE 连接保持打开，后端重启或下线时前端可重新切换 API 源
+- 浏览器不支持 SSE 时，前端每 60 秒通过 HTTP 健康检查一次
+- 列表和详情组件读取 API 源 signal，API 源变化后会自动重新请求数据
 
-#### 工作原理
+> JSONPlaceholder 的写操作是模拟响应，不会真正持久化；需要完整增删改查能力时请启动本地 NestJS 后端。
 
-- **SSE 连接**: 后端启动时与前端建立 SSE 连接
-- **心跳机制**: 后端每 30 秒发送心跳消息保持连接活跃
-- **自动切换**: 前端收到后端启动通知后切换到本地 API
-- **备用机制**: 如果后端不可用，前端使用备用 API
-- **定期检查**: 如果 SSE 不支持或连接失败，前端每 60 秒检查一次后端状态
+## 后端接口
 
-### 浏览器兼容性
+| 方法 | 路径 | 说明 | 状态码 |
+| --- | --- | --- | --- |
+| GET | `/users` | 获取用户列表 | 200 |
+| GET | `/users/:id` | 获取单个用户 | 200 / 404 |
+| POST | `/users` | 创建用户 | 201 / 400 |
+| PATCH | `/users/:id` | 局部更新用户 | 200 / 400 / 404 |
+| DELETE | `/users/:id` | 删除用户 | 204 / 404 |
+| GET | `/events/stream` | SSE 事件流 | 200 |
 
-EventSource (SSE) 浏览器支持情况：
-
-| 浏览器 | 支持版本 |
-|--------|---------|
-| Chrome | 6+ ✅ |
-| Firefox | 6+ ✅ |
-| Safari | 5.1+ ✅ |
-| Edge | 79+ ✅ |
-| Opera | 11.6+ ✅ |
-| iOS Safari | 4.2+ ✅ |
-| **Internet Explorer** | **全系列不支持** ❌ |
+非法数字 ID 会返回 400；不存在的用户会返回 404。
 
 ## 数据库
 
-后端使用 SQLite 进行数据持久化：
+后端使用 SQLite 和 TypeORM：
 
-- 数据库文件: `backend/database.sqlite`
-- TypeORM 用于数据库操作
-- 开发环境自动同步表结构
+- 数据库文件位于 `backend/database.sqlite`
+- 开发环境默认启用 `synchronize` 自动同步表结构
+- 生产环境（`NODE_ENV=production`）默认关闭自动同步，应使用数据库迁移
+- 也可以通过 `DB_SYNCHRONIZE=true|false` 显式覆盖该行为
 
-## API 端点
-
-### 用户 API
-
-| 方法 | 端点 | 描述 |
-|------|------|------|
-| GET | `/users` | 获取所有用户 |
-| GET | `/users/:id` | 根据 ID 获取用户 |
-| POST | `/users` | 创建新用户 |
-| PATCH | `/users/:id` | 更新用户 |
-| DELETE | `/users/:id` | 删除用户 |
-
-### 事件 API
-
-| 方法 | 端点 | 描述 |
-|------|------|------|
-| GET | `/events/stream` | SSE 事件流，用于实时通知 |
-
-## 代码脚手架
-
-### 前端（Angular）
-
-```bash
-ng generate component component-name
-ng generate service service-name
-ng generate directive directive-name
-```
-
-### 后端（NestJS）
-
-```bash
-cd backend
-nest generate module module-name
-nest generate controller controller-name
-nest generate service service-name
-nest generate resource resource-name
-```
-
-## 构建
+## 构建和测试
 
 ### 前端
+
 ```bash
 npm run build
-# 输出目录: dist/user-management/
+npm test -- --watch=false --browsers=ChromeHeadless
 ```
 
 ### 后端
+
 ```bash
 cd backend
 npm run build
-# 输出目录: dist/
-```
-
-## 测试
-
-### 前端
-```bash
 npm test
-```
-
-### 后端
-```bash
-cd backend
-npm run test
 npm run test:e2e
 ```
 
-## 更多资源
+## 参考资料
 
-- [Angular CLI 概述](https://angular.dev/tools/cli)
-- [Angular Signals 文档](https://angular.dev/guide/signals)
+- [Angular 文档](https://angular.dev/)
+- [Angular Signals](https://angular.dev/guide/signals)
 - [NestJS 文档](https://docs.nestjs.com/)
 - [TypeORM 文档](https://typeorm.io/)
-- [Server-Sent Events (MDN)](https://developer.mozilla.org/zh-CN/docs/Web/API/Server-sent_events)
-
----
-
-# UserManagement
-
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) and upgraded to Angular 22 with Signals.
-
-## Project Structure
-
-```
-angular-learning/
-├── src/                          # Angular frontend
-│   ├── app/
-│   │   ├── toast/               # Toast notification component
-│   │   ├── services/            # User service
-│   │   ├── user-list/           # User list component
-│   │   └── user-detail/         # User detail component
-├── backend/                      # NestJS backend
-│   ├── src/
-│   │   ├── users/               # User-related modules
-│   │   └── events/             # SSE event controller
-├── database.sqlite              # SQLite database
-└── README.md
-```
-
-## Technology Stack
-
-- **Frontend**: Angular 22, TypeScript 6.0, RxJS, Angular Router, Signals
-- **Backend**: NestJS 11, TypeORM, SQLite
-- **API**: RESTful API + Server-Sent Events (SSE)
-- **Build**: @angular/build (esbuild/Vite, migrated from webpack-based @angular-devkit/build-angular)
-
-## Quick Start
-
-### 1. Install Dependencies
-
-```bash
-# Frontend dependencies
-npm install
-
-# Backend dependencies
-cd backend && npm install
-```
-
-### 2. Start Servers
-
-**Terminal 1 - Frontend (Angular)**:
-```bash
-npm start
-# Access: http://localhost:4200
-```
-
-**Terminal 2 - Backend (NestJS)**:
-```bash
-cd backend
-npm run start:dev
-# Access: http://localhost:3000
-```
-
-## Features
-
-### User Management
-- View user list with search and filter
-- Create, edit, and delete users
-- View user details
-
-### Toast Notifications
-- Success, error, warning, and info message types
-- Auto-dismiss after 3 seconds
-- Manual dismiss available
-
-### Loading States
-- Spinner animation during data loading
-- User-friendly loading indicators
-
-### Signal Reactive Refactor
-
-The frontend has migrated from the traditional RxJS subscription model to Angular's Signal reactivity:
-
-- `signal()` holds writable state (e.g. `users`, `isLoading`, `user`)
-- `computed()` derived state — `filteredUsers` auto-tracks `users`/`searchTerm`/sort & filter, no manual `applyFilters()` calls
-- `input()` signal inputs replace `@Input()` (ToastComponent)
-- `effect()` side effects — toast auto-enqueues and schedules 3s dismiss on new messages
-- `ToastService` switched from `BehaviorSubject` to `signal`; components read directly, no subscribe/unsubscribe
-- On dismiss, `ToastService.remove(id)` prunes the source, fixing `scheduled` set and message-list memory growth
-
-> zone.js change detection is retained; form state like `newUser`/`editingUser` still uses plain objects for `[(ngModel)]` two-way binding.
-
-### API Switching Mechanism
-
-The frontend automatically switches between two API sources:
-
-1. **Local API**: `http://localhost:3000/users` (NestJS backend with SQLite)
-2. **Fallback API**: `https://jsonplaceholder.typicode.com/users` (public API)
-
-#### How It Works
-
-- **SSE Connection**: When backend starts, it establishes an SSE connection with the frontend
-- **Heartbeat**: Backend sends heartbeat messages every 30 seconds to keep the connection alive
-- **Automatic Switching**: Frontend switches to local API upon receiving SSE notification
-- **Fallback**: If backend is unavailable, frontend uses the fallback API
-- **Polling**: If SSE is not supported or connection fails, frontend checks backend status every 60 seconds
-
-### Browser Compatibility
-
-EventSource (SSE) browser support:
-
-| Browser | Support |
-|---------|---------|
-| Chrome | 6+ ✅ |
-| Firefox | 6+ ✅ |
-| Safari | 5.1+ ✅ |
-| Edge | 79+ ✅ |
-| Opera | 11.6+ ✅ |
-| iOS Safari | 4.2+ ✅ |
-| **Internet Explorer** | **Not supported** ❌ |
-
-## Database
-
-The backend uses SQLite for data persistence:
-
-- Database file: `backend/database.sqlite`
-- TypeORM for database operations
-- Automatic schema synchronization (`synchronize: true` for development)
-
-## API Endpoints
-
-### User API
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/users` | Get all users |
-| GET | `/users/:id` | Get user by ID |
-| POST | `/users` | Create new user |
-| PATCH | `/users/:id` | Update user |
-| DELETE | `/users/:id` | Delete user |
-
-### Events API
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/events/stream` | SSE event stream for real-time notifications |
-
-## Code Scaffolding
-
-### Frontend (Angular)
-
-```bash
-ng generate component component-name
-ng generate service service-name
-ng generate directive directive-name
-```
-
-### Backend (NestJS)
-
-```bash
-cd backend
-nest generate module module-name
-nest generate controller controller-name
-nest generate service service-name
-nest generate resource resource-name
-```
-
-## Building
-
-### Frontend
-```bash
-npm run build
-# Output: dist/user-management/
-```
-
-### Backend
-```bash
-cd backend
-npm run build
-# Output: dist/
-```
-
-## Testing
-
-### Frontend
-```bash
-npm test
-```
-
-### Backend
-```bash
-cd backend
-npm run test
-npm run test:e2e
-```
-
-## Additional Resources
-
-- [Angular CLI Overview](https://angular.dev/tools/cli)
-- [Angular Signals Documentation](https://angular.dev/guide/signals)
-- [NestJS Documentation](https://docs.nestjs.com/)
-- [TypeORM Documentation](https://typeorm.io/)
-- [Server-Sent Events (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
+- [Server-Sent Events（MDN）](https://developer.mozilla.org/zh-CN/docs/Web/API/Server-sent_events)

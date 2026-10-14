@@ -1,34 +1,19 @@
-import { IsString, IsEmail, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-/**
- * 更新用户的 DTO（数据传输对象）
- * 用于验证和传输更新用户时的数据
- */
+/** 局部更新用户时，所有字段均可选；字段一旦传入就不能为空字符串。 */
 export class UpdateUserDto {
-  /**
-   * 用户真实姓名
-   * @IsOptional() 字段是可选的
-   * @IsString() 确保字段为字符串类型
-   */
   @IsOptional()
+  @IsNotEmpty()
   @IsString()
   name?: string;
 
-  /**
-   * 用户名（登录用）
-   * @IsOptional() 字段是可选的
-   * @IsString() 确保字段为字符串类型
-   */
   @IsOptional()
+  @IsNotEmpty()
   @IsString()
   username?: string;
 
-  /**
-   * 电子邮件
-   * @IsOptional() 字段是可选的
-   * @IsEmail() 确保字段为有效的电子邮件格式
-   */
   @IsOptional()
+  @IsNotEmpty()
   @IsEmail()
   email?: string;
 }

@@ -1,24 +1,24 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './users/users.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { SseController } from './events/sse.controller';
+import { UsersModule } from './users/users.module';
 
-/**
- * 主应用模块
- * 导入和组织所有子模块
- */
+const isProduction = process.env.NODE_ENV === 'production';
+const synchronizeDatabase = process.env.DB_SYNCHRONIZE
+  ? process.env.DB_SYNCHRONIZE === 'true'
+  : !isProduction;
+
 @Module({
   imports: [
-    // 配置 TypeORM 连接 SQLite 数据库
-    // synchronize: true 自动同步数据库表结构（开发环境使用）
-    // 数据库文件会创建在项目根目录的 database.sqlite 文件中
     TypeOrmModule.forRoot({
       type: 'better-sqlite3',
       database: 'database.sqlite',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
+      // 开发环境默认同步表结构；生产环境默认关闭，应使用迁移管理数据库。
+      synchronize: synchronizeDatabase,
     }),
     UsersModule,
   ],
